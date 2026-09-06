@@ -1,36 +1,30 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# gakuhan-app
 
-## Getting Started
+学校向け「学販」（制服・体操服のオンライン注文）アプリ。まず日向学院向けに構築し、将来的には複数校への展開を見据えている。
 
-First, run the development server:
+## セットアップ
 
 ```bash
+npm install
+cp .env.example .env  # 値を編集する
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+- `http://localhost:3000/hyuga-gakuin` — 日向学院の注文フォーム
+- `http://localhost:3000/admin` — 管理画面（注文一覧・商品/価格編集）。`.env` の `ADMIN_PASSWORD` でログイン
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## 環境変数（`.env.example` 参照）
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- `DATABASE_URL` — SQLiteファイルのパス（開発時は `file:./dev.db` 相当だが、実体は `data/app.db`）
+- `SMTP_*` / `ORDER_NOTIFY_TO` — 新規注文時のメール通知設定。未設定の場合は通知をスキップしDB保存のみ行う
+- `ADMIN_PASSWORD` — 管理画面のログインパスワード
 
-## Learn More
+## データについて
 
-To learn more about Next.js, take a look at the following resources:
+- 商品・サイズ・価格は `data/app.db`（SQLite）で管理し、管理画面（`/admin/products`）から編集できる。販売直前の価格改定にコード変更なしで対応するための設計。
+- 初回起動時、DBが空であれば日向学院向けのプレースホルダー商品データが自動投入される（`lib/schools.ts` の `SEED_PRODUCTS`）。実際の商品・価格は本番投入前に管理画面から差し替えること。
+- 学校ごとに `School` を分ける設計にしてあるため、次の学校を追加する際は `SEED_SCHOOL`/`SEED_PRODUCTS` に相当するデータを追加し、`/[school]` の動的ルートで自動的にフォームが生成される。
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## 本番デプロイ時の注意
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- SQLiteはファイルベースのため、Vercelなど読み書き可能な永続ストレージがない環境ではデータが消える。自前サーバーやボリュームマウント可能な環境にデプロイすること。
