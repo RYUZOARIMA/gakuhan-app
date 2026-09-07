@@ -6,6 +6,11 @@ export type OrderItemInput = {
   quantity: number;
 };
 
+export type NameImageInput = {
+  data: Buffer;
+  contentType: string;
+};
+
 export type OrderInput = {
   schoolId: string;
   studentName: string;
@@ -15,6 +20,7 @@ export type OrderInput = {
   email: string;
   note?: string;
   items: OrderItemInput[];
+  nameImage?: NameImageInput;
 };
 
 export type CreatedOrderItem = {
@@ -42,8 +48,8 @@ export function createOrder(input: OrderInput): CreatedOrder {
   );
 
   const insertOrder = db.prepare(
-    `INSERT INTO orders (id, school_id, student_name, grade, guardian_name, phone, email, note)
-     VALUES (@id, @schoolId, @studentName, @grade, @guardianName, @phone, @email, @note)`,
+    `INSERT INTO orders (id, school_id, student_name, grade, guardian_name, phone, email, note, name_image, name_image_type)
+     VALUES (@id, @schoolId, @studentName, @grade, @guardianName, @phone, @email, @note, @nameImage, @nameImageType)`,
   );
 
   const insertItem = db.prepare(
@@ -63,6 +69,8 @@ export function createOrder(input: OrderInput): CreatedOrder {
       phone: input.phone,
       email: input.email,
       note: input.note ?? null,
+      nameImage: input.nameImage?.data ?? null,
+      nameImageType: input.nameImage?.contentType ?? null,
     });
 
     for (const item of input.items) {
@@ -116,17 +124,23 @@ export type OrderRow = {
   note: string | null;
   status: string;
   createdAt: string;
+  hasNameImage: boolean;
 };
 
 export function listOrders(schoolId: string): OrderRow[] {
-  return db
+  const rows = db
     .prepare(
       `SELECT id, school_id as schoolId, student_name as studentName, grade,
               guardian_name as guardianName, phone, email, note, status,
-              created_at as createdAt
+              created_at as createdAt,
+              (name_image IS NOT NULL) as hasNameImage
        FROM orders WHERE school_id = ? ORDER BY created_at DESC`,
     )
-    .all(schoolId) as OrderRow[];
+    .all(schoolId) as (Omit<OrderRow, "hasNameImage"> & {
+    hasNameImage: number;
+  })[];
+
+  return rows.map((row) => ({ ...row, hasNameImage: Boolean(row.hasNameImage) }));
 }
 
 export function listOrderItems(orderId: string): CreatedOrderItem[] {
@@ -136,4 +150,15 @@ export function listOrderItems(orderId: string): CreatedOrderItem[] {
        FROM order_items WHERE order_id = ?`,
     )
     .all(orderId) as CreatedOrderItem[];
+}
+
+export function getOrderNameImage(orderId: string): NameImageInput | undefined {
+  const row = db
+    .prepare(
+      `SELECT name_image as data, name_image_type as contentType
+       FROM orders WHERE id = ? AND name_image IS NOT NULL`,
+    )
+    .get(orderId) as { data: Buffer; contentType: string } | undefined;
+  if (!row) return undefined;
+  return { data: row.data, contentType: row.contentType };
 }

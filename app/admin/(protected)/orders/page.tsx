@@ -43,6 +43,23 @@ export default function AdminOrdersPage() {
                       {order.createdAt}
                     </p>
                   </div>
+                  {order.hasNameImage && (
+                    <a
+                      href={`/admin/orders/${order.id}/name-image`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="mt-2 inline-block"
+                    >
+                      <img
+                        src={`/admin/orders/${order.id}/name-image`}
+                        alt={`${order.studentName} 様 手書き氏名`}
+                        className="h-16 w-auto rounded border border-zinc-300 object-contain dark:border-zinc-700"
+                      />
+                      <span className="mt-1 block text-xs text-zinc-500 dark:text-zinc-400">
+                        手書き氏名画像（クリックで拡大）
+                      </span>
+                    </a>
+                  )}
                   <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
                     保護者: {order.guardianName} / {order.phone} /{" "}
                     {order.email}
