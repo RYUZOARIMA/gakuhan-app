@@ -5,8 +5,6 @@ import { getSchoolBySlug } from "@/lib/schools";
 import { createOrder } from "@/lib/orders";
 import { sendOrderNotification } from "@/lib/mailer";
 
-const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
-
 const itemSchema = z.object({
   variantId: z.string().min(1),
   quantity: z.number().int().min(1).max(20),
@@ -66,26 +64,10 @@ export async function submitOrder(
     return { ok: false, error: parsed.error.issues[0]?.message ?? "入力内容を確認してください" };
   }
 
-  const nameImageFile = formData.get("nameImage");
-  let nameImage: { data: Buffer; contentType: string } | undefined;
-  if (nameImageFile instanceof File && nameImageFile.size > 0) {
-    if (!nameImageFile.type.startsWith("image/")) {
-      return { ok: false, error: "手書き氏名の画像は画像ファイルを選択してください" };
-    }
-    if (nameImageFile.size > MAX_IMAGE_BYTES) {
-      return { ok: false, error: "手書き氏名の画像は5MB以下にしてください" };
-    }
-    nameImage = {
-      data: Buffer.from(await nameImageFile.arrayBuffer()),
-      contentType: nameImageFile.type,
-    };
-  }
-
   try {
     const order = createOrder({
       schoolId: school.id,
       ...parsed.data,
-      nameImage,
     });
 
     await sendOrderNotification({
