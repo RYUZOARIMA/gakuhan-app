@@ -1,4 +1,3 @@
-import { randomUUID } from "node:crypto";
 import { db } from "./db";
 
 export type School = {
@@ -97,7 +96,9 @@ function seedIfEmpty() {
     .get(SEED_SCHOOL.slug) as { id: string } | undefined;
   if (existing) return;
 
-  const schoolId = randomUUID();
+  // サーバーレス環境ではインスタンスごとに独立したDBが作られうるため、
+  // 複数インスタンス間でも商品/バリアントIDが一致するよう固定IDでシードする。
+  const schoolId = `seed-school-${SEED_SCHOOL.slug}`;
   db.prepare("INSERT INTO schools (id, slug, name) VALUES (?, ?, ?)").run(
     schoolId,
     SEED_SCHOOL.slug,
@@ -112,7 +113,7 @@ function seedIfEmpty() {
   );
 
   SEED_PRODUCTS.forEach((product, productIndex) => {
-    const productId = randomUUID();
+    const productId = `seed-product-${productIndex}`;
     insertProduct.run(
       productId,
       schoolId,
@@ -122,7 +123,7 @@ function seedIfEmpty() {
     );
     product.variants.forEach((variant, variantIndex) => {
       insertVariant.run(
-        randomUUID(),
+        `seed-variant-${productIndex}-${variantIndex}`,
         productId,
         variant.size,
         variant.price,
