@@ -19,6 +19,7 @@ const orderSchema = z.object({
   phone: z.string().trim().min(1, "電話番号を入力してください"),
   email: z.string().trim().email("メールアドレスの形式が正しくありません"),
   note: z.string().trim().optional(),
+  nameNote: z.string().trim().optional(),
   items: z.array(itemSchema).min(1, "1点以上選択してください"),
 });
 
@@ -55,6 +56,7 @@ export async function submitOrder(
     phone: formData.get("phone"),
     email: formData.get("email"),
     note: formData.get("note") ?? undefined,
+    nameNote: formData.get("nameNote") ?? undefined,
     items,
   });
 

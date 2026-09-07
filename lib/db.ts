@@ -70,7 +70,7 @@ db.exec(`
   );
 `);
 
-// 生徒氏名に外字・異体字が含まれる場合の手書き画像。
+// 生徒氏名に外字・異体字が含まれる場合の手書き画像・説明メモ。
 // 既存DBへの後方互換のため ALTER TABLE で追加する。
 const orderColumns = db.prepare("PRAGMA table_info(orders)").all() as {
   name: string;
@@ -81,4 +81,8 @@ if (!hasNameImage) {
     ALTER TABLE orders ADD COLUMN name_image BLOB;
     ALTER TABLE orders ADD COLUMN name_image_type TEXT;
   `);
+}
+const hasNameNote = orderColumns.some((c) => c.name === "name_note");
+if (!hasNameNote) {
+  db.exec(`ALTER TABLE orders ADD COLUMN name_note TEXT;`);
 }

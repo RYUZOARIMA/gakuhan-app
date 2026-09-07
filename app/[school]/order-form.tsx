@@ -125,6 +125,19 @@ export function OrderForm({
         </label>
 
         <label className="flex flex-col gap-1 text-sm text-zinc-700 dark:text-zinc-300">
+          氏名の特殊文字についての説明（任意）
+          <textarea
+            name="nameNote"
+            rows={2}
+            placeholder="例：「吉田」の「吉」の上部が「士」ではなく「土」"
+            className="rounded border border-zinc-300 px-3 py-2 dark:border-zinc-700 dark:bg-zinc-900"
+          />
+          <span className="text-xs text-zinc-500 dark:text-zinc-500">
+            通常の文字と異なる部分がある場合は、具体的にどこがどう違うかをご記入ください。内容によっては、後日学校販売担当よりお電話にてご確認させていただく場合がございます。
+          </span>
+        </label>
+
+        <label className="flex flex-col gap-1 text-sm text-zinc-700 dark:text-zinc-300">
           学年・組
           <input
             type="text"

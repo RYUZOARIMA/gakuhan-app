@@ -21,6 +21,7 @@ export type OrderInput = {
   note?: string;
   items: OrderItemInput[];
   nameImage?: NameImageInput;
+  nameNote?: string;
 };
 
 export type CreatedOrderItem = {
@@ -48,8 +49,8 @@ export function createOrder(input: OrderInput): CreatedOrder {
   );
 
   const insertOrder = db.prepare(
-    `INSERT INTO orders (id, school_id, student_name, grade, guardian_name, phone, email, note, name_image, name_image_type)
-     VALUES (@id, @schoolId, @studentName, @grade, @guardianName, @phone, @email, @note, @nameImage, @nameImageType)`,
+    `INSERT INTO orders (id, school_id, student_name, grade, guardian_name, phone, email, note, name_image, name_image_type, name_note)
+     VALUES (@id, @schoolId, @studentName, @grade, @guardianName, @phone, @email, @note, @nameImage, @nameImageType, @nameNote)`,
   );
 
   const insertItem = db.prepare(
@@ -71,6 +72,7 @@ export function createOrder(input: OrderInput): CreatedOrder {
       note: input.note ?? null,
       nameImage: input.nameImage?.data ?? null,
       nameImageType: input.nameImage?.contentType ?? null,
+      nameNote: input.nameNote ?? null,
     });
 
     for (const item of input.items) {
@@ -125,6 +127,7 @@ export type OrderRow = {
   status: string;
   createdAt: string;
   hasNameImage: boolean;
+  nameNote: string | null;
 };
 
 export function listOrders(schoolId: string): OrderRow[] {
@@ -133,7 +136,8 @@ export function listOrders(schoolId: string): OrderRow[] {
       `SELECT id, school_id as schoolId, student_name as studentName, grade,
               guardian_name as guardianName, phone, email, note, status,
               created_at as createdAt,
-              (name_image IS NOT NULL) as hasNameImage
+              (name_image IS NOT NULL) as hasNameImage,
+              name_note as nameNote
        FROM orders WHERE school_id = ? ORDER BY created_at DESC`,
     )
     .all(schoolId) as (Omit<OrderRow, "hasNameImage"> & {
