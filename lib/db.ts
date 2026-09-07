@@ -2,7 +2,9 @@ import Database from "better-sqlite3";
 import fs from "node:fs";
 import path from "node:path";
 
-const dataDir = path.join(process.cwd(), "data");
+const dataDir = process.env.VERCEL
+  ? path.join("/tmp", "gakuhan-data")
+  : path.join(process.cwd(), "data");
 fs.mkdirSync(dataDir, { recursive: true });
 
 const globalForDb = globalThis as unknown as { db?: Database.Database };
