@@ -1,10 +1,57 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import type { Product } from "@/lib/schools";
 import type { OrderFormState } from "./actions";
 
 const initialState: OrderFormState = { ok: false };
+
+function ProductRow({ product }: { product: Product }) {
+  const [variantId, setVariantId] = useState(product.variants[0]?.id ?? "");
+  const selected = product.variants.find((v) => v.id === variantId);
+
+  if (!selected) return null;
+
+  return (
+    <div className="flex flex-wrap items-center gap-3 rounded-lg border border-zinc-200 px-4 py-3 dark:border-zinc-800">
+      <p className="min-w-[10rem] flex-1 font-medium text-zinc-900 dark:text-zinc-50">
+        {product.name}
+      </p>
+
+      <label className="flex items-center gap-2 text-sm text-zinc-600 dark:text-zinc-400">
+        サイズ
+        <select
+          name="variantId"
+          value={variantId}
+          onChange={(e) => setVariantId(e.target.value)}
+          className="rounded border border-zinc-300 px-2 py-1 dark:border-zinc-700 dark:bg-zinc-900"
+        >
+          {product.variants.map((v) => (
+            <option key={v.id} value={v.id}>
+              {v.size}
+            </option>
+          ))}
+        </select>
+      </label>
+
+      <span className="w-20 text-right text-sm text-zinc-500 dark:text-zinc-400">
+        {selected.price.toLocaleString()}円
+      </span>
+
+      <label className="flex items-center gap-2 text-sm text-zinc-600 dark:text-zinc-400">
+        数量
+        <input
+          type="number"
+          name="quantity"
+          min={0}
+          max={10}
+          defaultValue={0}
+          className="w-16 rounded border border-zinc-300 px-2 py-1 text-right dark:border-zinc-700 dark:bg-zinc-900"
+        />
+      </label>
+    </div>
+  );
+}
 
 export function OrderForm({
   products,
@@ -43,35 +90,9 @@ export function OrderForm({
           </legend>
           {products
             .filter((p) => p.category === category)
-            .map((product) =>
-              product.variants.map((variant) => (
-                <div
-                  key={variant.id}
-                  className="flex items-center justify-between gap-4 rounded-lg border border-zinc-200 px-4 py-3 dark:border-zinc-800"
-                >
-                  <input type="hidden" name="variantId" value={variant.id} />
-                  <div>
-                    <p className="font-medium text-zinc-900 dark:text-zinc-50">
-                      {product.name}（{variant.size}）
-                    </p>
-                    <p className="text-sm text-zinc-500 dark:text-zinc-400">
-                      {variant.price.toLocaleString()}円
-                    </p>
-                  </div>
-                  <label className="flex items-center gap-2 text-sm text-zinc-600 dark:text-zinc-400">
-                    数量
-                    <input
-                      type="number"
-                      name="quantity"
-                      min={0}
-                      max={10}
-                      defaultValue={0}
-                      className="w-16 rounded border border-zinc-300 px-2 py-1 text-right dark:border-zinc-700 dark:bg-zinc-900"
-                    />
-                  </label>
-                </div>
-              )),
-            )}
+            .map((product) => (
+              <ProductRow key={product.id} product={product} />
+            ))}
         </fieldset>
       ))}
 
