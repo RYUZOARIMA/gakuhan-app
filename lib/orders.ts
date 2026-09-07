@@ -145,3 +145,42 @@ export function listOrderItems(orderId: string): CreatedOrderItem[] {
     )
     .all(orderId) as CreatedOrderItem[];
 }
+
+export type PurchaseSummaryRow = {
+  category: string;
+  productName: string;
+  size: string;
+  unitPrice: number;
+  totalQuantity: number;
+  subtotal: number;
+};
+
+export function getPurchaseSummary(schoolId: string): PurchaseSummaryRow[] {
+  const rows = db
+    .prepare(
+      `SELECT p.category as category, oi.product_name as productName, oi.size as size,
+              oi.unit_price as unitPrice, SUM(oi.quantity) as totalQuantity
+       FROM order_items oi
+       JOIN orders o ON o.id = oi.order_id
+       LEFT JOIN products p ON p.name = oi.product_name AND p.school_id = o.school_id
+       WHERE o.school_id = ?
+       GROUP BY p.category, oi.product_name, oi.size, oi.unit_price
+       ORDER BY p.sort_order, oi.product_name, oi.size`,
+    )
+    .all(schoolId) as {
+    category: string | null;
+    productName: string;
+    size: string;
+    unitPrice: number;
+    totalQuantity: number;
+  }[];
+
+  return rows.map((row) => ({
+    category: row.category ?? "その他",
+    productName: row.productName,
+    size: row.size,
+    unitPrice: row.unitPrice,
+    totalQuantity: row.totalQuantity,
+    subtotal: row.unitPrice * row.totalQuantity,
+  }));
+}

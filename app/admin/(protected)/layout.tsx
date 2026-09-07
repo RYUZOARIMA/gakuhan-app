@@ -17,6 +17,7 @@ export default async function AdminProtectedLayout({
         <nav className="flex gap-4 text-sm font-medium text-zinc-700 dark:text-zinc-300">
           <Link href="/admin/orders">注文一覧</Link>
           <Link href="/admin/products">商品・価格管理</Link>
+          <Link href="/admin/summary">発注集計</Link>
         </nav>
         <form action={logoutAction}>
           <button
