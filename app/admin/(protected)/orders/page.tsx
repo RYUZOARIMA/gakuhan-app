@@ -37,7 +37,7 @@ export default function AdminOrdersPage() {
                 >
                   <div className="flex flex-wrap items-baseline justify-between gap-2">
                     <p className="font-medium text-zinc-900 dark:text-zinc-50">
-                      {order.studentName} 様（{order.grade}）
+                      {order.studentName}　（{order.studentFurigana}） 様（{order.grade}）
                     </p>
                     <p className="text-xs text-zinc-500 dark:text-zinc-400">
                       {order.createdAt}

@@ -14,6 +14,7 @@ export type NameImageInput = {
 export type OrderInput = {
   schoolId: string;
   studentName: string;
+  studentFurigana: string;
   grade: string;
   guardianName: string;
   phone: string;
@@ -49,8 +50,8 @@ export function createOrder(input: OrderInput): CreatedOrder {
   );
 
   const insertOrder = db.prepare(
-    `INSERT INTO orders (id, school_id, student_name, grade, guardian_name, phone, email, note, name_image, name_image_type, name_note)
-     VALUES (@id, @schoolId, @studentName, @grade, @guardianName, @phone, @email, @note, @nameImage, @nameImageType, @nameNote)`,
+    `INSERT INTO orders (id, school_id, student_name, student_furigana, grade, guardian_name, phone, email, note, name_image, name_image_type, name_note)
+     VALUES (@id, @schoolId, @studentName, @studentFurigana, @grade, @guardianName, @phone, @email, @note, @nameImage, @nameImageType, @nameNote)`,
   );
 
   const insertItem = db.prepare(
@@ -65,6 +66,7 @@ export function createOrder(input: OrderInput): CreatedOrder {
       id: orderId,
       schoolId: input.schoolId,
       studentName: input.studentName,
+      studentFurigana: input.studentFurigana,
       grade: input.grade,
       guardianName: input.guardianName,
       phone: input.phone,
@@ -119,6 +121,7 @@ export type OrderRow = {
   id: string;
   schoolId: string;
   studentName: string;
+  studentFurigana: string;
   grade: string;
   guardianName: string;
   phone: string;
@@ -133,7 +136,8 @@ export type OrderRow = {
 export function listOrders(schoolId: string): OrderRow[] {
   const rows = db
     .prepare(
-      `SELECT id, school_id as schoolId, student_name as studentName, grade,
+      `SELECT id, school_id as schoolId, student_name as studentName,
+              student_furigana as studentFurigana, grade,
               guardian_name as guardianName, phone, email, note, status,
               created_at as createdAt,
               (name_image IS NOT NULL) as hasNameImage,

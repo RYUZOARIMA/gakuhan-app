@@ -14,6 +14,7 @@ const itemSchema = z.object({
 
 const orderSchema = z.object({
   studentName: z.string().trim().min(1, "生徒氏名を入力してください"),
+  studentFurigana: z.string().trim().min(1, "生徒氏名のフリガナを入力してください"),
   grade: z.string().trim().min(1, "学年・組を入力してください"),
   guardianName: z.string().trim().min(1, "保護者氏名を入力してください"),
   phone: z.string().trim().min(1, "電話番号を入力してください"),
@@ -51,6 +52,7 @@ export async function submitOrder(
 
   const parsed = orderSchema.safeParse({
     studentName: formData.get("studentName"),
+    studentFurigana: formData.get("studentFurigana"),
     grade: formData.get("grade"),
     guardianName: formData.get("guardianName"),
     phone: formData.get("phone"),

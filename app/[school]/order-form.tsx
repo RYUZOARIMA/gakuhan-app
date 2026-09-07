@@ -112,6 +112,17 @@ export function OrderForm({
         </label>
 
         <label className="flex flex-col gap-1 text-sm text-zinc-700 dark:text-zinc-300">
+          生徒氏名（フリガナ）
+          <input
+            type="text"
+            name="studentFurigana"
+            placeholder="例: ヤマダ タロウ"
+            required
+            className="rounded border border-zinc-300 px-3 py-2 dark:border-zinc-700 dark:bg-zinc-900"
+          />
+        </label>
+
+        <label className="flex flex-col gap-1 text-sm text-zinc-700 dark:text-zinc-300">
           生徒氏名の手書き画像（任意）
           <input
             type="file"
