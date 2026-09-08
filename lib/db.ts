@@ -1,4 +1,4 @@
-import { Pool } from "pg";
+import { Pool, type PoolClient } from "pg";
 
 const connectionString = process.env.POSTGRES_URL ?? process.env.DATABASE_URL;
 
@@ -28,8 +28,27 @@ if (process.env.NODE_ENV !== "production") {
   globalForDb.pgPool = pool;
 }
 
+// next buildの静的生成やコールドスタートで複数プロセスが同時にCREATE TABLEを
+// 実行すると、IF NOT EXISTSでも内部的な重複キーエラーで競合することがあるため、
+// アドバイザリロックで排他制御する。
+const SCHEMA_LOCK_KEY = 727271;
+
 async function initSchema() {
-  await pool.query(`
+  const client = await pool.connect();
+  try {
+    await client.query("SELECT pg_advisory_lock($1)", [SCHEMA_LOCK_KEY]);
+    try {
+      await runSchemaDdl(client);
+    } finally {
+      await client.query("SELECT pg_advisory_unlock($1)", [SCHEMA_LOCK_KEY]);
+    }
+  } finally {
+    client.release();
+  }
+}
+
+async function runSchemaDdl(client: PoolClient) {
+  await client.query(`
     CREATE TABLE IF NOT EXISTS schools (
       id TEXT PRIMARY KEY,
       slug TEXT UNIQUE NOT NULL,
