@@ -1,8 +1,8 @@
 import Link from "next/link";
 import { listSchools } from "@/lib/schools";
 
-export default function Home() {
-  const schools = listSchools();
+export default async function Home() {
+  const schools = await listSchools();
 
   return (
     <div className="flex flex-1 flex-col items-center bg-zinc-50 px-6 py-16 dark:bg-black">

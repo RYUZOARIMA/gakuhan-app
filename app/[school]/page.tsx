@@ -9,10 +9,10 @@ export default async function SchoolOrderPage({
   params: Promise<{ school: string }>;
 }) {
   const { school: schoolSlug } = await params;
-  const school = getSchoolBySlug(schoolSlug);
+  const school = await getSchoolBySlug(schoolSlug);
   if (!school) notFound();
 
-  const products = listActiveProducts(school.id);
+  const products = await listActiveProducts(school.id);
   const boundSubmitOrder = submitOrder.bind(null, school.slug);
 
   return (

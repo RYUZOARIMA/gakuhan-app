@@ -7,8 +7,14 @@ import {
   updateVariantPriceAction,
 } from "../actions";
 
-export default function AdminProductsPage() {
-  const schools = listSchools();
+export default async function AdminProductsPage() {
+  const schools = await listSchools();
+  const schoolsWithProducts = await Promise.all(
+    schools.map(async (school) => ({
+      school,
+      products: await listAllProducts(school.id),
+    })),
+  );
 
   return (
     <div className="mx-auto flex max-w-3xl flex-col gap-10">
@@ -21,8 +27,7 @@ export default function AdminProductsPage() {
         </p>
       </div>
 
-      {schools.map((school) => {
-        const products = listAllProducts(school.id);
+      {schoolsWithProducts.map(({ school, products }) => {
         return (
           <section key={school.id} className="flex flex-col gap-4">
             <h2 className="text-lg font-medium text-zinc-900 dark:text-zinc-50">

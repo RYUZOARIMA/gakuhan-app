@@ -20,12 +20,13 @@ export async function GET(
   }
 
   const { schoolId } = await params;
-  const school = listSchools().find((s) => s.id === schoolId);
+  const schools = await listSchools();
+  const school = schools.find((s) => s.id === schoolId);
   if (!school) {
     return new Response("Not found", { status: 404 });
   }
 
-  const rows = getPurchaseSummary(schoolId);
+  const rows = await getPurchaseSummary(schoolId);
 
   const header = ["カテゴリ", "商品", "サイズ", "単価", "必要数", "小計"];
   const lines = [header.join(",")];

@@ -1,8 +1,14 @@
 import { listSchools } from "@/lib/schools";
 import { getPurchaseSummary } from "@/lib/orders";
 
-export default function AdminSummaryPage() {
-  const schools = listSchools();
+export default async function AdminSummaryPage() {
+  const schools = await listSchools();
+  const schoolsWithSummary = await Promise.all(
+    schools.map(async (school) => ({
+      school,
+      rows: await getPurchaseSummary(school.id),
+    })),
+  );
 
   return (
     <div className="mx-auto flex max-w-4xl flex-col gap-8">
@@ -15,8 +21,7 @@ export default function AdminSummaryPage() {
         </p>
       </div>
 
-      {schools.map((school) => {
-        const rows = getPurchaseSummary(school.id);
+      {schoolsWithSummary.map(({ school, rows }) => {
         const grandTotal = rows.reduce((sum, r) => sum + r.subtotal, 0);
         const grandQuantity = rows.reduce((sum, r) => sum + r.totalQuantity, 0);
 

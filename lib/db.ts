@@ -1,87 +1,89 @@
-import Database from "better-sqlite3";
-import fs from "node:fs";
-import path from "node:path";
+import { Pool } from "pg";
 
-const dataDir = process.env.VERCEL
-  ? path.join("/tmp", "gakuhan-data")
-  : path.join(process.cwd(), "data");
-fs.mkdirSync(dataDir, { recursive: true });
+const connectionString = process.env.POSTGRES_URL ?? process.env.DATABASE_URL;
 
-const globalForDb = globalThis as unknown as { db?: Database.Database };
+if (!connectionString) {
+  throw new Error(
+    "POSTGRES_URL (または DATABASE_URL) が設定されていません。Postgresの接続文字列を環境変数に設定してください。",
+  );
+}
 
-export const db =
-  globalForDb.db ?? new Database(path.join(dataDir, "app.db"));
+const isLocal = connectionString.includes("localhost") || connectionString.includes("127.0.0.1");
+
+const globalForDb = globalThis as unknown as {
+  pgPool?: Pool;
+  schemaReady?: Promise<void>;
+};
+
+export const pool =
+  globalForDb.pgPool ??
+  new Pool({
+    connectionString,
+    ssl: isLocal ? false : { rejectUnauthorized: false },
+    max: 5,
+    idleTimeoutMillis: 10_000,
+  });
 
 if (process.env.NODE_ENV !== "production") {
-  globalForDb.db = db;
+  globalForDb.pgPool = pool;
 }
 
-db.pragma("journal_mode = WAL");
-db.pragma("foreign_keys = ON");
-db.pragma("busy_timeout = 5000");
+async function initSchema() {
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS schools (
+      id TEXT PRIMARY KEY,
+      slug TEXT UNIQUE NOT NULL,
+      name TEXT NOT NULL,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    );
 
-db.exec(`
-  CREATE TABLE IF NOT EXISTS schools (
-    id TEXT PRIMARY KEY,
-    slug TEXT UNIQUE NOT NULL,
-    name TEXT NOT NULL,
-    created_at TEXT NOT NULL DEFAULT (datetime('now'))
-  );
+    CREATE TABLE IF NOT EXISTS products (
+      id TEXT PRIMARY KEY,
+      school_id TEXT NOT NULL REFERENCES schools(id),
+      category TEXT NOT NULL,
+      name TEXT NOT NULL,
+      active INTEGER NOT NULL DEFAULT 1,
+      sort_order INTEGER NOT NULL DEFAULT 0
+    );
 
-  CREATE TABLE IF NOT EXISTS products (
-    id TEXT PRIMARY KEY,
-    school_id TEXT NOT NULL REFERENCES schools(id),
-    category TEXT NOT NULL,
-    name TEXT NOT NULL,
-    active INTEGER NOT NULL DEFAULT 1,
-    sort_order INTEGER NOT NULL DEFAULT 0
-  );
+    CREATE TABLE IF NOT EXISTS product_variants (
+      id TEXT PRIMARY KEY,
+      product_id TEXT NOT NULL REFERENCES products(id),
+      size TEXT NOT NULL,
+      price INTEGER NOT NULL,
+      active INTEGER NOT NULL DEFAULT 1,
+      sort_order INTEGER NOT NULL DEFAULT 0
+    );
 
-  CREATE TABLE IF NOT EXISTS product_variants (
-    id TEXT PRIMARY KEY,
-    product_id TEXT NOT NULL REFERENCES products(id),
-    size TEXT NOT NULL,
-    price INTEGER NOT NULL,
-    active INTEGER NOT NULL DEFAULT 1,
-    sort_order INTEGER NOT NULL DEFAULT 0
-  );
+    CREATE TABLE IF NOT EXISTS orders (
+      id TEXT PRIMARY KEY,
+      school_id TEXT NOT NULL REFERENCES schools(id),
+      student_name TEXT NOT NULL,
+      student_furigana TEXT NOT NULL DEFAULT '',
+      grade TEXT NOT NULL,
+      guardian_name TEXT NOT NULL,
+      phone TEXT NOT NULL,
+      email TEXT NOT NULL,
+      note TEXT,
+      name_note TEXT,
+      status TEXT NOT NULL DEFAULT 'received',
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    );
 
-  CREATE TABLE IF NOT EXISTS orders (
-    id TEXT PRIMARY KEY,
-    school_id TEXT NOT NULL REFERENCES schools(id),
-    student_name TEXT NOT NULL,
-    grade TEXT NOT NULL,
-    guardian_name TEXT NOT NULL,
-    phone TEXT NOT NULL,
-    email TEXT NOT NULL,
-    note TEXT,
-    status TEXT NOT NULL DEFAULT 'received',
-    created_at TEXT NOT NULL DEFAULT (datetime('now'))
-  );
-
-  CREATE TABLE IF NOT EXISTS order_items (
-    id TEXT PRIMARY KEY,
-    order_id TEXT NOT NULL REFERENCES orders(id),
-    variant_id TEXT NOT NULL REFERENCES product_variants(id),
-    product_name TEXT NOT NULL,
-    size TEXT NOT NULL,
-    unit_price INTEGER NOT NULL,
-    quantity INTEGER NOT NULL
-  );
-`);
-
-// 生徒氏名に外字・異体字が含まれる場合の説明メモ・フリガナ。
-// 既存DBへの後方互換のため ALTER TABLE で追加する。
-const orderColumns = db.prepare("PRAGMA table_info(orders)").all() as {
-  name: string;
-}[];
-const hasNameNote = orderColumns.some((c) => c.name === "name_note");
-if (!hasNameNote) {
-  db.exec(`ALTER TABLE orders ADD COLUMN name_note TEXT;`);
+    CREATE TABLE IF NOT EXISTS order_items (
+      id TEXT PRIMARY KEY,
+      order_id TEXT NOT NULL REFERENCES orders(id),
+      variant_id TEXT NOT NULL REFERENCES product_variants(id),
+      product_name TEXT NOT NULL,
+      size TEXT NOT NULL,
+      unit_price INTEGER NOT NULL,
+      quantity INTEGER NOT NULL
+    );
+  `);
 }
-const hasFurigana = orderColumns.some((c) => c.name === "student_furigana");
-if (!hasFurigana) {
-  db.exec(
-    `ALTER TABLE orders ADD COLUMN student_furigana TEXT NOT NULL DEFAULT '';`,
-  );
+
+export const schemaReady = globalForDb.schemaReady ?? initSchema();
+
+if (process.env.NODE_ENV !== "production") {
+  globalForDb.schemaReady = schemaReady;
 }

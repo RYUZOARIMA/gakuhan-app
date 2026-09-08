@@ -33,7 +33,7 @@ export async function submitOrder(
   _prevState: OrderFormState,
   formData: FormData,
 ): Promise<OrderFormState> {
-  const school = getSchoolBySlug(schoolSlug);
+  const school = await getSchoolBySlug(schoolSlug);
   if (!school) {
     return { ok: false, error: "学校が見つかりません" };
   }
@@ -65,7 +65,7 @@ export async function submitOrder(
   }
 
   try {
-    const order = createOrder({
+    const order = await createOrder({
       schoolId: school.id,
       ...parsed.data,
     });

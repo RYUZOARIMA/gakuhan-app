@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { db } from "./db";
+import { pool, schemaReady } from "./db";
 
 export type OrderItemInput = {
   variantId: string;
@@ -15,8 +15,8 @@ export type OrderInput = {
   phone: string;
   email: string;
   note?: string;
-  items: OrderItemInput[];
   nameNote?: string;
+  items: OrderItemInput[];
 };
 
 export type CreatedOrderItem = {
@@ -33,73 +33,84 @@ export type CreatedOrder = {
   total: number;
 };
 
-export function createOrder(input: OrderInput): CreatedOrder {
+export async function createOrder(input: OrderInput): Promise<CreatedOrder> {
+  await schemaReady;
   const orderId = randomUUID();
-
-  const getVariant = db.prepare(
-    `SELECT pv.id, pv.price, pv.size, p.name as productName
-     FROM product_variants pv
-     JOIN products p ON p.id = pv.product_id
-     WHERE pv.id = ? AND pv.active = 1`,
-  );
-
-  const insertOrder = db.prepare(
-    `INSERT INTO orders (id, school_id, student_name, student_furigana, grade, guardian_name, phone, email, note, name_note)
-     VALUES (@id, @schoolId, @studentName, @studentFurigana, @grade, @guardianName, @phone, @email, @note, @nameNote)`,
-  );
-
-  const insertItem = db.prepare(
-    `INSERT INTO order_items (id, order_id, variant_id, product_name, size, unit_price, quantity)
-     VALUES (?, ?, ?, ?, ?, ?, ?)`,
-  );
-
   const items: CreatedOrderItem[] = [];
 
-  const run = db.transaction(() => {
-    insertOrder.run({
-      id: orderId,
-      schoolId: input.schoolId,
-      studentName: input.studentName,
-      studentFurigana: input.studentFurigana,
-      grade: input.grade,
-      guardianName: input.guardianName,
-      phone: input.phone,
-      email: input.email,
-      note: input.note ?? null,
-      nameNote: input.nameNote ?? null,
-    });
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+
+    await client.query(
+      `INSERT INTO orders
+         (id, school_id, student_name, student_furigana, grade, guardian_name, phone, email, note, name_note)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
+      [
+        orderId,
+        input.schoolId,
+        input.studentName,
+        input.studentFurigana,
+        input.grade,
+        input.guardianName,
+        input.phone,
+        input.email,
+        input.note ?? null,
+        input.nameNote ?? null,
+      ],
+    );
 
     for (const item of input.items) {
-      const variant = getVariant.get(item.variantId) as
-        | { id: string; price: number; size: string; productName: string }
-        | undefined;
-      if (!variant) {
-        throw new Error(`商品が見つかりません: ${item.variantId}`);
-      }
       if (item.quantity < 1) {
         throw new Error("数量は1以上を指定してください");
       }
 
-      insertItem.run(
-        randomUUID(),
-        orderId,
-        variant.id,
-        variant.productName,
-        variant.size,
-        variant.price,
-        item.quantity,
+      const variantResult = await client.query<{
+        id: string;
+        price: number;
+        size: string;
+        productname: string;
+      }>(
+        `SELECT pv.id, pv.price, pv.size, p.name as productName
+         FROM product_variants pv
+         JOIN products p ON p.id = pv.product_id
+         WHERE pv.id = $1 AND pv.active = 1`,
+        [item.variantId],
+      );
+      const variant = variantResult.rows[0];
+      if (!variant) {
+        throw new Error(`商品が見つかりません: ${item.variantId}`);
+      }
+
+      await client.query(
+        `INSERT INTO order_items (id, order_id, variant_id, product_name, size, unit_price, quantity)
+         VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+        [
+          randomUUID(),
+          orderId,
+          variant.id,
+          variant.productname,
+          variant.size,
+          variant.price,
+          item.quantity,
+        ],
       );
 
       items.push({
-        productName: variant.productName,
+        productName: variant.productname,
         size: variant.size,
         unitPrice: variant.price,
         quantity: item.quantity,
       });
     }
-  });
 
-  run();
+    await client.query("COMMIT");
+  } catch (error) {
+    await client.query("ROLLBACK");
+    throw error;
+  } finally {
+    client.release();
+  }
 
   return {
     id: orderId,
@@ -119,31 +130,73 @@ export type OrderRow = {
   phone: string;
   email: string;
   note: string | null;
+  nameNote: string | null;
   status: string;
   createdAt: string;
-  nameNote: string | null;
 };
 
-export function listOrders(schoolId: string): OrderRow[] {
-  return db
-    .prepare(
-      `SELECT id, school_id as schoolId, student_name as studentName,
-              student_furigana as studentFurigana, grade,
-              guardian_name as guardianName, phone, email, note, status,
-              created_at as createdAt,
-              name_note as nameNote
-       FROM orders WHERE school_id = ? ORDER BY created_at DESC`,
-    )
-    .all(schoolId) as OrderRow[];
+type OrderRowRaw = {
+  id: string;
+  schoolid: string;
+  studentname: string;
+  studentfurigana: string;
+  grade: string;
+  guardianname: string;
+  phone: string;
+  email: string;
+  note: string | null;
+  namenote: string | null;
+  status: string;
+  createdat: string;
+};
+
+export async function listOrders(schoolId: string): Promise<OrderRow[]> {
+  await schemaReady;
+  const result = await pool.query<OrderRowRaw>(
+    `SELECT id, school_id as schoolId, student_name as studentName,
+            student_furigana as studentFurigana, grade,
+            guardian_name as guardianName, phone, email, note, status,
+            created_at::text as createdAt,
+            name_note as nameNote
+     FROM orders WHERE school_id = $1 ORDER BY created_at DESC`,
+    [schoolId],
+  );
+  return result.rows.map((row) => ({
+    id: row.id,
+    schoolId: row.schoolid,
+    studentName: row.studentname,
+    studentFurigana: row.studentfurigana,
+    grade: row.grade,
+    guardianName: row.guardianname,
+    phone: row.phone,
+    email: row.email,
+    note: row.note,
+    nameNote: row.namenote,
+    status: row.status,
+    createdAt: row.createdat,
+  }));
 }
 
-export function listOrderItems(orderId: string): CreatedOrderItem[] {
-  return db
-    .prepare(
-      `SELECT product_name as productName, size, unit_price as unitPrice, quantity
-       FROM order_items WHERE order_id = ?`,
-    )
-    .all(orderId) as CreatedOrderItem[];
+type OrderItemRowRaw = {
+  productname: string;
+  size: string;
+  unitprice: number;
+  quantity: number;
+};
+
+export async function listOrderItems(orderId: string): Promise<CreatedOrderItem[]> {
+  await schemaReady;
+  const result = await pool.query<OrderItemRowRaw>(
+    `SELECT product_name as productName, size, unit_price as unitPrice, quantity
+     FROM order_items WHERE order_id = $1`,
+    [orderId],
+  );
+  return result.rows.map((row) => ({
+    productName: row.productname,
+    size: row.size,
+    unitPrice: row.unitprice,
+    quantity: row.quantity,
+  }));
 }
 
 export type PurchaseSummaryRow = {
@@ -155,32 +208,37 @@ export type PurchaseSummaryRow = {
   subtotal: number;
 };
 
-export function getPurchaseSummary(schoolId: string): PurchaseSummaryRow[] {
-  const rows = db
-    .prepare(
-      `SELECT p.category as category, oi.product_name as productName, oi.size as size,
-              oi.unit_price as unitPrice, SUM(oi.quantity) as totalQuantity
-       FROM order_items oi
-       JOIN orders o ON o.id = oi.order_id
-       LEFT JOIN products p ON p.name = oi.product_name AND p.school_id = o.school_id
-       WHERE o.school_id = ?
-       GROUP BY p.category, oi.product_name, oi.size, oi.unit_price
-       ORDER BY p.sort_order, oi.product_name, oi.size`,
-    )
-    .all(schoolId) as {
-    category: string | null;
-    productName: string;
-    size: string;
-    unitPrice: number;
-    totalQuantity: number;
-  }[];
+type PurchaseSummaryRowRaw = {
+  category: string | null;
+  productname: string;
+  size: string;
+  unitprice: number;
+  totalquantity: string;
+};
 
-  return rows.map((row) => ({
-    category: row.category ?? "その他",
-    productName: row.productName,
-    size: row.size,
-    unitPrice: row.unitPrice,
-    totalQuantity: row.totalQuantity,
-    subtotal: row.unitPrice * row.totalQuantity,
-  }));
+export async function getPurchaseSummary(schoolId: string): Promise<PurchaseSummaryRow[]> {
+  await schemaReady;
+  const result = await pool.query<PurchaseSummaryRowRaw>(
+    `SELECT p.category as category, oi.product_name as productName, oi.size as size,
+            oi.unit_price as unitPrice, SUM(oi.quantity) as totalQuantity
+     FROM order_items oi
+     JOIN orders o ON o.id = oi.order_id
+     LEFT JOIN products p ON p.name = oi.product_name AND p.school_id = o.school_id
+     WHERE o.school_id = $1
+     GROUP BY p.category, oi.product_name, oi.size, oi.unit_price, p.sort_order
+     ORDER BY p.sort_order, oi.product_name, oi.size`,
+    [schoolId],
+  );
+
+  return result.rows.map((row) => {
+    const totalQuantity = Number(row.totalquantity);
+    return {
+      category: row.category ?? "その他",
+      productName: row.productname,
+      size: row.size,
+      unitPrice: row.unitprice,
+      totalQuantity,
+      subtotal: row.unitprice * totalQuantity,
+    };
+  });
 }
