@@ -90,11 +90,10 @@ const SEED_PRODUCTS: {
   },
 ];
 
-async function seedIfEmpty() {
-  const existing = await pool.query("SELECT id FROM schools WHERE slug = $1", [
-    SEED_SCHOOL.slug,
-  ]);
-  if (existing.rows.length > 0) return;
+async function ensureSeedData() {
+  // 学校が既にあっても打ち切らない: ビルド中断等で商品の途中までしか
+  // 投入されなかった場合に備え、常に不足分を補充できるようにする
+  // (各INSERTはON CONFLICT DO NOTHINGで冪等)。
 
   // 複数インスタンス間でも商品/バリアントIDが一致するよう固定IDでシードする。
   const schoolId = `seed-school-${SEED_SCHOOL.slug}`;
@@ -127,7 +126,7 @@ async function seedIfEmpty() {
   }
 }
 
-const ready = schemaReady.then(() => seedIfEmpty());
+const ready = schemaReady.then(() => ensureSeedData());
 
 export function getSchoolBySlug(slug: string): Promise<School | undefined> {
   return ready.then(async () => {
