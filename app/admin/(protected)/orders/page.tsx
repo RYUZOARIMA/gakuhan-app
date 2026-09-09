@@ -35,9 +35,17 @@ export default async function AdminOrdersPage() {
 
       {schoolsWithOrders.map(({ school, orders }) => (
         <section key={school.id} className="flex flex-col gap-4">
-          <h2 className="text-lg font-medium text-zinc-900 dark:text-zinc-50">
-            {school.name}（{orders.length}件）
-          </h2>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h2 className="text-lg font-medium text-zinc-900 dark:text-zinc-50">
+              {school.name}（{orders.length}件）
+            </h2>
+            <a
+              href={`/admin/orders/${school.id}/export`}
+              className="rounded-full border border-zinc-300 px-4 py-1.5 text-sm text-zinc-700 hover:bg-zinc-100 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-900"
+            >
+              CSVダウンロード
+            </a>
+          </div>
 
           {orders.length === 0 && (
             <p className="text-sm text-zinc-500 dark:text-zinc-400">
