@@ -85,6 +85,8 @@ async function runSchemaDdl(client: PoolClient) {
       email TEXT NOT NULL,
       note TEXT,
       name_note TEXT,
+      name_image BYTEA,
+      name_image_type TEXT,
       status TEXT NOT NULL DEFAULT 'received',
       created_at TIMESTAMPTZ NOT NULL DEFAULT now()
     );
@@ -98,6 +100,12 @@ async function runSchemaDdl(client: PoolClient) {
       unit_price INTEGER NOT NULL,
       quantity INTEGER NOT NULL
     );
+  `);
+
+  // 既存DB(name_image列追加前)への後方互換
+  await client.query(`
+    ALTER TABLE orders ADD COLUMN IF NOT EXISTS name_image BYTEA;
+    ALTER TABLE orders ADD COLUMN IF NOT EXISTS name_image_type TEXT;
   `);
 }
 

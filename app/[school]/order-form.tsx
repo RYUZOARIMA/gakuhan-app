@@ -136,6 +136,19 @@ export function OrderForm({
         </label>
 
         <label className="flex flex-col gap-1 text-sm text-zinc-700 dark:text-zinc-300">
+          生徒氏名の手書き画像（任意）
+          <input
+            type="file"
+            name="nameImage"
+            accept="image/*"
+            className="rounded border border-zinc-300 px-3 py-2 text-sm file:mr-3 file:rounded file:border-0 file:bg-zinc-100 file:px-3 file:py-1 file:text-sm dark:border-zinc-700 dark:bg-zinc-900 dark:file:bg-zinc-800"
+          />
+          <span className="text-xs text-zinc-500 dark:text-zinc-500">
+            氏名に外字・異体字が含まれ正しく入力できない場合は、手書きの氏名を撮影・スキャンした画像を添付してください。
+          </span>
+        </label>
+
+        <label className="flex flex-col gap-1 text-sm text-zinc-700 dark:text-zinc-300">
           学年・組
           <input
             type="text"

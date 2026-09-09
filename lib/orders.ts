@@ -6,6 +6,11 @@ export type OrderItemInput = {
   quantity: number;
 };
 
+export type NameImageInput = {
+  data: Buffer;
+  contentType: string;
+};
+
 export type OrderInput = {
   schoolId: string;
   studentName: string;
@@ -16,6 +21,7 @@ export type OrderInput = {
   email: string;
   note?: string;
   nameNote?: string;
+  nameImage?: NameImageInput;
   items: OrderItemInput[];
 };
 
@@ -44,8 +50,8 @@ export async function createOrder(input: OrderInput): Promise<CreatedOrder> {
 
     await client.query(
       `INSERT INTO orders
-         (id, school_id, student_name, student_furigana, grade, guardian_name, phone, email, note, name_note)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
+         (id, school_id, student_name, student_furigana, grade, guardian_name, phone, email, note, name_note, name_image, name_image_type)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
       [
         orderId,
         input.schoolId,
@@ -57,6 +63,8 @@ export async function createOrder(input: OrderInput): Promise<CreatedOrder> {
         input.email,
         input.note ?? null,
         input.nameNote ?? null,
+        input.nameImage?.data ?? null,
+        input.nameImage?.contentType ?? null,
       ],
     );
 
@@ -131,6 +139,7 @@ export type OrderRow = {
   email: string;
   note: string | null;
   nameNote: string | null;
+  hasNameImage: boolean;
   status: string;
   createdAt: string;
 };
@@ -146,6 +155,7 @@ type OrderRowRaw = {
   email: string;
   note: string | null;
   namenote: string | null;
+  hasnameimage: boolean;
   status: string;
   createdat: string;
 };
@@ -157,7 +167,8 @@ export async function listOrders(schoolId: string): Promise<OrderRow[]> {
             student_furigana as studentFurigana, grade,
             guardian_name as guardianName, phone, email, note, status,
             created_at::text as createdAt,
-            name_note as nameNote
+            name_note as nameNote,
+            (name_image IS NOT NULL) as hasNameImage
      FROM orders WHERE school_id = $1 ORDER BY created_at DESC`,
     [schoolId],
   );
@@ -172,9 +183,24 @@ export async function listOrders(schoolId: string): Promise<OrderRow[]> {
     email: row.email,
     note: row.note,
     nameNote: row.namenote,
+    hasNameImage: row.hasnameimage,
     status: row.status,
     createdAt: row.createdat,
   }));
+}
+
+export async function getOrderNameImage(
+  orderId: string,
+): Promise<NameImageInput | undefined> {
+  await schemaReady;
+  const result = await pool.query<{ data: Buffer; contenttype: string }>(
+    `SELECT name_image as data, name_image_type as contentType
+     FROM orders WHERE id = $1 AND name_image IS NOT NULL`,
+    [orderId],
+  );
+  const row = result.rows[0];
+  if (!row) return undefined;
+  return { data: row.data, contentType: row.contenttype };
 }
 
 type OrderItemRowRaw = {
