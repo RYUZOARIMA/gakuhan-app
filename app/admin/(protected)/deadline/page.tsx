@@ -2,6 +2,7 @@ import Link from "next/link";
 import { listSchools } from "@/lib/schools";
 import { countOrders, getPurchaseSummary } from "@/lib/orders";
 import { PurchaseSummaryTable } from "../purchase-summary-table";
+import { SearchBox, SearchableItem } from "@/app/search-filter";
 
 export default async function AdminDeadlinePage({
   searchParams,
@@ -69,23 +70,29 @@ export default async function AdminDeadlinePage({
         )}
       </form>
 
-      {schoolsWithData.map(({ school, orderCount, rows }) => (
-        <section key={school.id} className="flex flex-col gap-3">
-          <div className="flex flex-wrap items-baseline justify-between gap-2">
-            <h2 className="text-lg font-medium text-zinc-900 dark:text-zinc-50">
-              {school.name}
-            </h2>
-            <p className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
-              この期間の注文件数: {orderCount}件
-            </p>
-          </div>
+      <SearchBox placeholder="学校名で検索">
+        <div className="mt-6 flex flex-col gap-8">
+          {schoolsWithData.map(({ school, orderCount, rows }) => (
+            <SearchableItem key={school.id} matchText={school.name}>
+              <section className="flex flex-col gap-3">
+                <div className="flex flex-wrap items-baseline justify-between gap-2">
+                  <h2 className="text-lg font-medium text-zinc-900 dark:text-zinc-50">
+                    {school.name}
+                  </h2>
+                  <p className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
+                    この期間の注文件数: {orderCount}件
+                  </p>
+                </div>
 
-          <PurchaseSummaryTable
-            rows={rows}
-            emptyMessage="この期間の注文はありません。"
-          />
-        </section>
-      ))}
+                <PurchaseSummaryTable
+                  rows={rows}
+                  emptyMessage="この期間の注文はありません。"
+                />
+              </section>
+            </SearchableItem>
+          ))}
+        </div>
+      </SearchBox>
     </div>
   );
 }

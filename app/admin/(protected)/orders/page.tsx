@@ -2,6 +2,7 @@ import { listSchools } from "@/lib/schools";
 import { listOrderItems, listOrders, type CreatedOrderItem, type OrderRow } from "@/lib/orders";
 import { deleteOrderAction } from "../actions";
 import { DeleteOrderButton } from "./delete-order-button";
+import { SearchBox, SearchableItem } from "@/app/search-filter";
 
 type SchoolWithOrders = {
   school: Awaited<ReturnType<typeof listSchools>>[number];
@@ -35,92 +36,98 @@ export default async function AdminOrdersPage() {
         注文一覧
       </h1>
 
-      {schoolsWithOrders.map(({ school, orders }) => (
-        <section key={school.id} className="flex flex-col gap-4">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <h2 className="text-lg font-medium text-zinc-900 dark:text-zinc-50">
-              {school.name}（{orders.length}件）
-            </h2>
-            <a
-              href={`/admin/orders/export/${school.id}`}
-              className="rounded-full border border-zinc-300 px-4 py-1.5 text-sm text-zinc-700 hover:bg-zinc-100 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-900"
-            >
-              CSVダウンロード
-            </a>
-          </div>
-
-          {orders.length === 0 && (
-            <p className="text-sm text-zinc-500 dark:text-zinc-400">
-              注文はまだありません。
-            </p>
-          )}
-
-          {orders.map((order) => (
-            <div
-              key={order.id}
-              className="rounded-lg border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-950"
-            >
-              <div className="flex flex-wrap items-baseline justify-between gap-2">
-                <p className="font-medium text-zinc-900 dark:text-zinc-50">
-                  {order.studentName}　（{order.studentFurigana}） 様（{order.grade}）
-                </p>
-                <div className="flex items-center gap-3">
-                  <p className="text-xs text-zinc-500 dark:text-zinc-400">
-                    {order.createdAt}
-                  </p>
-                  <DeleteOrderButton
-                    orderId={order.id}
-                    studentName={order.studentName}
-                    action={deleteOrderAction}
-                  />
+      <SearchBox placeholder="学校名で検索">
+        <div className="mt-6 flex flex-col gap-8">
+          {schoolsWithOrders.map(({ school, orders }) => (
+            <SearchableItem key={school.id} matchText={school.name}>
+              <section className="flex flex-col gap-4">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <h2 className="text-lg font-medium text-zinc-900 dark:text-zinc-50">
+                    {school.name}（{orders.length}件）
+                  </h2>
+                  <a
+                    href={`/admin/orders/export/${school.id}`}
+                    className="rounded-full border border-zinc-300 px-4 py-1.5 text-sm text-zinc-700 hover:bg-zinc-100 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-900"
+                  >
+                    CSVダウンロード
+                  </a>
                 </div>
-              </div>
-              {order.nameNote && (
-                <p className="mt-2 rounded border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-100">
-                  氏名の特殊文字について: {order.nameNote}
-                </p>
-              )}
-              {order.hasNameImage && (
-                <a
-                  href={`/admin/orders/${order.id}/name-image`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="mt-2 inline-block"
-                >
-                  <img
-                    src={`/admin/orders/${order.id}/name-image`}
-                    alt={`${order.studentName} 様 手書き氏名`}
-                    className="h-16 w-auto rounded border border-zinc-300 object-contain dark:border-zinc-700"
-                  />
-                  <span className="mt-1 block text-xs text-zinc-500 dark:text-zinc-400">
-                    手書き氏名画像（クリックで拡大）
-                  </span>
-                </a>
-              )}
-              <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
-                保護者: {order.guardianName} / {order.phone} /{" "}
-                {order.email}
-              </p>
-              {order.note && (
-                <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
-                  備考: {order.note}
-                </p>
-              )}
-              <ul className="mt-3 flex flex-col gap-1 text-sm text-zinc-700 dark:text-zinc-300">
-                {order.items.map((item, i) => (
-                  <li key={i}>
-                    {item.productName}（{item.size}） x{item.quantity} ={" "}
-                    {(item.unitPrice * item.quantity).toLocaleString()}円
-                  </li>
+
+                {orders.length === 0 && (
+                  <p className="text-sm text-zinc-500 dark:text-zinc-400">
+                    注文はまだありません。
+                  </p>
+                )}
+
+                {orders.map((order) => (
+                  <div
+                    key={order.id}
+                    className="rounded-lg border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-950"
+                  >
+                    <div className="flex flex-wrap items-baseline justify-between gap-2">
+                      <p className="font-medium text-zinc-900 dark:text-zinc-50">
+                        {order.studentName}　（{order.studentFurigana}） 様（{order.grade}）
+                      </p>
+                      <div className="flex items-center gap-3">
+                        <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                          {order.createdAt}
+                        </p>
+                        <DeleteOrderButton
+                          orderId={order.id}
+                          studentName={order.studentName}
+                          action={deleteOrderAction}
+                        />
+                      </div>
+                    </div>
+                    {order.nameNote && (
+                      <p className="mt-2 rounded border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-100">
+                        氏名の特殊文字について: {order.nameNote}
+                      </p>
+                    )}
+                    {order.hasNameImage && (
+                      <a
+                        href={`/admin/orders/${order.id}/name-image`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="mt-2 inline-block"
+                      >
+                        <img
+                          src={`/admin/orders/${order.id}/name-image`}
+                          alt={`${order.studentName} 様 手書き氏名`}
+                          className="h-16 w-auto rounded border border-zinc-300 object-contain dark:border-zinc-700"
+                        />
+                        <span className="mt-1 block text-xs text-zinc-500 dark:text-zinc-400">
+                          手書き氏名画像（クリックで拡大）
+                        </span>
+                      </a>
+                    )}
+                    <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
+                      保護者: {order.guardianName} / {order.phone} /{" "}
+                      {order.email}
+                    </p>
+                    {order.note && (
+                      <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
+                        備考: {order.note}
+                      </p>
+                    )}
+                    <ul className="mt-3 flex flex-col gap-1 text-sm text-zinc-700 dark:text-zinc-300">
+                      {order.items.map((item, i) => (
+                        <li key={i}>
+                          {item.productName}（{item.size}） x{item.quantity} ={" "}
+                          {(item.unitPrice * item.quantity).toLocaleString()}円
+                        </li>
+                      ))}
+                    </ul>
+                    <p className="mt-2 text-right font-medium text-zinc-900 dark:text-zinc-50">
+                      合計 {order.total.toLocaleString()}円
+                    </p>
+                  </div>
                 ))}
-              </ul>
-              <p className="mt-2 text-right font-medium text-zinc-900 dark:text-zinc-50">
-                合計 {order.total.toLocaleString()}円
-              </p>
-            </div>
+              </section>
+            </SearchableItem>
           ))}
-        </section>
-      ))}
+        </div>
+      </SearchBox>
     </div>
   );
 }
