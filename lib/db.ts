@@ -46,16 +46,26 @@ if (process.env.NODE_ENV !== "production") {
 // next buildの静的生成やコールドスタートで複数プロセスが同時にCREATE TABLEを
 // 実行すると、IF NOT EXISTSでも内部的な重複キーエラーで競合することがあるため、
 // アドバイザリロックで排他制御する。
-const SCHEMA_LOCK_KEY = 727271;
+//
+// 旧実装はセッションレベルのpg_advisory_lock/unlockを使っていたが、本番の接続文字列が
+// プーラー(PgBouncer等)を経由する場合、ロック取得後に論理セッションが別の物理接続へ
+// 切り替わってしまいunlockが別セッションで実行される＝ロックが永久に解放されない
+// 事故が発生した（全ページが応答不能になるまで進行）。トランザクション終了時に自動解放
+// されるpg_advisory_xact_lockに切り替え、この種の孤立ロックが起き得ないようにする。
+// 旧キーは孤立ロックとして残っている可能性があるため、別の値を使って競合を避ける。
+const SCHEMA_LOCK_KEY = 727272;
 
 async function initSchema() {
   const client = await pool.connect();
   try {
-    await client.query("SELECT pg_advisory_lock($1)", [SCHEMA_LOCK_KEY]);
+    await client.query("BEGIN");
     try {
+      await client.query("SELECT pg_advisory_xact_lock($1)", [SCHEMA_LOCK_KEY]);
       await runSchemaDdl(client);
-    } finally {
-      await client.query("SELECT pg_advisory_unlock($1)", [SCHEMA_LOCK_KEY]);
+      await client.query("COMMIT");
+    } catch (err) {
+      await client.query("ROLLBACK").catch(() => {});
+      throw err;
     }
   } finally {
     client.release();
