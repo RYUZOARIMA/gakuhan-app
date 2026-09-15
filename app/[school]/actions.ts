@@ -2,7 +2,7 @@
 
 import { z } from "zod";
 import { getSchoolBySlug } from "@/lib/schools";
-import { sendOrderNotification } from "@/lib/mailer";
+import { sendOrderNotification, sendOrderReceipt } from "@/lib/mailer";
 import {
   createOrderVerification,
   confirmOrderVerification,
@@ -85,6 +85,19 @@ export async function orderAction(
       });
     } catch (error) {
       console.error("[orderAction] admin notification failed", error);
+    }
+
+    try {
+      await sendOrderReceipt({
+        schoolName: school.name,
+        order: result.order,
+        studentName: result.customer.studentName,
+        grade: result.customer.grade,
+        guardianName: result.customer.guardianName,
+        email: result.customer.email,
+      });
+    } catch (error) {
+      console.error("[orderAction] customer receipt failed", error);
     }
 
     return { stage: "done", orderId: result.order.id };

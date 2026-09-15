@@ -21,6 +21,17 @@ function getNotifyRecipients(): string[] {
     .filter((addr) => addr.length > 0);
 }
 
+function formatOrderItemLines(order: CreatedOrder): string {
+  return order.items
+    .map(
+      (item) =>
+        `- ${item.productName} (${item.size}) x${item.quantity} = ${(
+          item.unitPrice * item.quantity
+        ).toLocaleString()}円`,
+    )
+    .join("\n");
+}
+
 export async function sendOrderNotification(params: {
   schoolName: string;
   order: CreatedOrder;
@@ -41,14 +52,7 @@ export async function sendOrderNotification(params: {
     return;
   }
 
-  const itemLines = params.order.items
-    .map(
-      (item) =>
-        `- ${item.productName} (${item.size}) x${item.quantity} = ${(
-          item.unitPrice * item.quantity
-        ).toLocaleString()}円`,
-    )
-    .join("\n");
+  const itemLines = formatOrderItemLines(params.order);
 
   const text = `${params.schoolName} で新しい注文がありました。
 
@@ -69,6 +73,53 @@ ${itemLines}
     from: process.env.SMTP_FROM,
     to,
     subject: `[学販] 新規注文 - ${params.schoolName} - ${params.studentName}様`,
+    text,
+  });
+}
+
+// 注文確定時に注文者(保護者)本人へ控えを送る。管理者向け通知
+// (sendOrderNotification)と異なりSMTP未設定でも呼び出し元は失敗させない
+// （注文自体はDBに保存済みのため、控えメールが送れないだけで注文を失敗にしない）。
+export async function sendOrderReceipt(params: {
+  schoolName: string;
+  order: CreatedOrder;
+  studentName: string;
+  grade: string;
+  guardianName: string;
+  email: string;
+}) {
+  const transport = getTransport();
+  if (!transport) {
+    console.warn(
+      "[mailer] SMTP is not configured. Skipping order receipt email for order",
+      params.order.id,
+    );
+    return;
+  }
+
+  const itemLines = formatOrderItemLines(params.order);
+
+  const text = `${params.guardianName} 様
+
+${params.schoolName} 学販オンライン注文をご利用いただき、ありがとうございます。
+以下の内容でご注文を承りました。
+
+注文ID: ${params.order.id}
+生徒氏名: ${params.studentName}
+学年・組: ${params.grade}
+
+--- 注文内容 ---
+${itemLines}
+
+合計: ${params.order.total.toLocaleString()}円
+
+このメールは注文確定の控えです。お問い合わせの際は上記の注文IDをお伝えください。
+`;
+
+  await transport.sendMail({
+    from: process.env.SMTP_FROM,
+    to: params.email,
+    subject: `[学販] ご注文確認 - ${params.schoolName} - ${params.studentName}様`,
     text,
   });
 }
