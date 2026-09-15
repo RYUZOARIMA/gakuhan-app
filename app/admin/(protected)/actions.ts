@@ -12,21 +12,41 @@ export async function logoutAction() {
   redirect("/admin/login");
 }
 
-const MAX_LOGO_BYTES = 3 * 1024 * 1024;
+const MAX_LOGO_BYTES = 5 * 1024 * 1024;
+
+function logoErrorRedirect(message: string): never {
+  redirect(`/admin/products?logoError=${encodeURIComponent(message)}`);
+}
 
 export async function uploadSchoolLogoAction(formData: FormData) {
   const schoolId = String(formData.get("schoolId"));
   const file = formData.get("logo");
-  if (!schoolId || !(file instanceof File) || file.size === 0) return;
+  if (!schoolId) return;
 
-  if (!file.type.startsWith("image/")) return;
-  if (file.size > MAX_LOGO_BYTES) return;
+  if (!(file instanceof File) || file.size === 0) {
+    logoErrorRedirect("ファイルが選択されていません。");
+  }
+  if (!file.type.startsWith("image/")) {
+    logoErrorRedirect(
+      `画像ファイルを選択してください（選択されたファイルの種類: ${file.type || "不明"}）。`,
+    );
+  }
+  if (file.size > MAX_LOGO_BYTES) {
+    logoErrorRedirect(
+      `画像ファイルは5MB以下にしてください（選択されたファイル: ${(
+        file.size /
+        1024 /
+        1024
+      ).toFixed(1)}MB）。`,
+    );
+  }
 
   await setSchoolLogo(schoolId, Buffer.from(await file.arrayBuffer()), file.type);
 
   revalidatePath("/admin/products");
   revalidatePath("/");
   revalidatePath("/[school]", "page");
+  redirect("/admin/products");
 }
 
 export async function deleteSchoolLogoAction(formData: FormData) {

@@ -15,9 +15,9 @@ import { DeleteProductButton } from "./delete-product-button";
 export default async function AdminProductsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ deleteError?: string }>;
+  searchParams: Promise<{ deleteError?: string; logoError?: string }>;
 }) {
-  const { deleteError } = await searchParams;
+  const { deleteError, logoError } = await searchParams;
   const schools = await listSchools();
   const schoolsWithProducts = await Promise.all(
     schools.map(async (school) => ({
@@ -38,6 +38,11 @@ export default async function AdminProductsPage({
         {deleteError && (
           <p className="mt-3 rounded-lg border border-red-300 bg-red-50 p-3 text-sm text-red-800 dark:border-red-800 dark:bg-red-950 dark:text-red-200">
             {deleteError}
+          </p>
+        )}
+        {logoError && (
+          <p className="mt-3 rounded-lg border border-red-300 bg-red-50 p-3 text-sm text-red-800 dark:border-red-800 dark:bg-red-950 dark:text-red-200">
+            校章のアップロードに失敗しました: {logoError}
           </p>
         )}
       </div>
