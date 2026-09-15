@@ -13,6 +13,14 @@ function getTransport() {
   });
 }
 
+// ORDER_NOTIFY_TOはカンマ区切りで複数指定できる（例: "a@example.com,b@example.com"）。
+function getNotifyRecipients(): string[] {
+  return (process.env.ORDER_NOTIFY_TO ?? "")
+    .split(",")
+    .map((addr) => addr.trim())
+    .filter((addr) => addr.length > 0);
+}
+
 export async function sendOrderNotification(params: {
   schoolName: string;
   order: CreatedOrder;
@@ -22,10 +30,10 @@ export async function sendOrderNotification(params: {
   phone: string;
   email: string;
 }) {
-  const to = process.env.ORDER_NOTIFY_TO;
+  const to = getNotifyRecipients();
   const transport = getTransport();
 
-  if (!transport || !to) {
+  if (!transport || to.length === 0) {
     console.warn(
       "[mailer] SMTP or ORDER_NOTIFY_TO is not configured. Skipping email notification for order",
       params.order.id,
