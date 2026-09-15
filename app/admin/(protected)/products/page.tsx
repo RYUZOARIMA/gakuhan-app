@@ -58,7 +58,7 @@ export default async function AdminProductsPage({
               {school.hasLogo ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
-                  src={`/${school.slug}/logo`}
+                  src={`/${school.slug}/logo?v=${school.logoVersion}`}
                   alt={`${school.name} 校章`}
                   className="h-16 w-16 shrink-0 rounded border border-zinc-200 object-contain dark:border-zinc-800"
                 />

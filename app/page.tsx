@@ -24,7 +24,7 @@ export default async function Home() {
                 {school.hasLogo && (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
-                    src={`/${school.slug}/logo`}
+                    src={`/${school.slug}/logo?v=${school.logoVersion}`}
                     alt={`${school.name} 校章`}
                     className="h-12 w-12 shrink-0 object-contain"
                   />

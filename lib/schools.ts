@@ -5,6 +5,9 @@ export type School = {
   slug: string;
   name: string;
   hasLogo: boolean;
+  // 校章の最終更新時刻(ミリ秒)。<img src>にクエリとして付与し、差し替え後の
+  // ソフトナビゲーションでも古い画像がそのまま表示され続けないようにする。
+  logoVersion: number;
 };
 
 export type ProductVariant = {
@@ -366,16 +369,26 @@ type SchoolRowRaw = {
   slug: string;
   name: string;
   haslogo: boolean;
+  logoupdatedat: string | null;
 };
 
 function mapSchoolRow(row: SchoolRowRaw): School {
-  return { id: row.id, slug: row.slug, name: row.name, hasLogo: row.haslogo };
+  return {
+    id: row.id,
+    slug: row.slug,
+    name: row.name,
+    hasLogo: row.haslogo,
+    logoVersion: row.logoupdatedat ? new Date(row.logoupdatedat).getTime() : 0,
+  };
 }
+
+const SCHOOL_SELECT_COLUMNS =
+  "id, slug, name, (logo IS NOT NULL) as hasLogo, logo_updated_at::text as logoUpdatedAt";
 
 export function getSchoolBySlug(slug: string): Promise<School | undefined> {
   return ready.then(async () => {
     const result = await pool.query<SchoolRowRaw>(
-      "SELECT id, slug, name, (logo IS NOT NULL) as hasLogo FROM schools WHERE slug = $1",
+      `SELECT ${SCHOOL_SELECT_COLUMNS} FROM schools WHERE slug = $1`,
       [slug],
     );
     return result.rows[0] ? mapSchoolRow(result.rows[0]) : undefined;
@@ -385,7 +398,7 @@ export function getSchoolBySlug(slug: string): Promise<School | undefined> {
 export function listSchools(): Promise<School[]> {
   return ready.then(async () => {
     const result = await pool.query<SchoolRowRaw>(
-      "SELECT id, slug, name, (logo IS NOT NULL) as hasLogo FROM schools",
+      `SELECT ${SCHOOL_SELECT_COLUMNS} FROM schools`,
     );
     return result.rows.map(mapSchoolRow);
   });
@@ -410,18 +423,18 @@ export async function setSchoolLogo(
   contentType: string,
 ): Promise<void> {
   await schemaReady;
-  await pool.query("UPDATE schools SET logo = $1, logo_type = $2 WHERE id = $3", [
-    data,
-    contentType,
-    schoolId,
-  ]);
+  await pool.query(
+    "UPDATE schools SET logo = $1, logo_type = $2, logo_updated_at = now() WHERE id = $3",
+    [data, contentType, schoolId],
+  );
 }
 
 export async function deleteSchoolLogo(schoolId: string): Promise<void> {
   await schemaReady;
-  await pool.query("UPDATE schools SET logo = NULL, logo_type = NULL WHERE id = $1", [
-    schoolId,
-  ]);
+  await pool.query(
+    "UPDATE schools SET logo = NULL, logo_type = NULL, logo_updated_at = now() WHERE id = $1",
+    [schoolId],
+  );
 }
 
 type ProductRow = {

@@ -155,6 +155,7 @@ async function runSchemaDdl(client: PoolClient) {
   await client.query(`
     ALTER TABLE schools ADD COLUMN IF NOT EXISTS logo BYTEA;
     ALTER TABLE schools ADD COLUMN IF NOT EXISTS logo_type TEXT;
+    ALTER TABLE schools ADD COLUMN IF NOT EXISTS logo_updated_at TIMESTAMPTZ;
   `);
 }
 
