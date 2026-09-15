@@ -28,46 +28,24 @@ export async function GET(
 
   const orders = await listOrders(schoolId);
 
-  const header = [
-    "注文日時",
-    "生徒氏名",
-    "フリガナ",
-    "学年・組",
-    "保護者氏名",
-    "電話番号",
-    "メールアドレス",
-    "商品",
-    "サイズ",
-    "単価",
-    "数量",
-    "小計",
-    "備考",
-    "氏名の特殊文字について",
-  ];
+  const header = ["日時", "注文者", "注文内容", "総額"];
   const lines = [header.join(",")];
 
   for (const order of orders) {
     const items = await listOrderItems(order.id);
-    for (const item of items) {
-      lines.push(
-        [
-          escapeCsvField(order.createdAt),
-          escapeCsvField(order.studentName),
-          escapeCsvField(order.studentFurigana),
-          escapeCsvField(order.grade),
-          escapeCsvField(order.guardianName),
-          escapeCsvField(order.phone),
-          escapeCsvField(order.email),
-          escapeCsvField(item.productName),
-          escapeCsvField(item.size),
-          escapeCsvField(item.unitPrice),
-          escapeCsvField(item.quantity),
-          escapeCsvField(item.unitPrice * item.quantity),
-          escapeCsvField(order.note ?? ""),
-          escapeCsvField(order.nameNote ?? ""),
-        ].join(","),
-      );
-    }
+    const total = items.reduce((sum, item) => sum + item.unitPrice * item.quantity, 0);
+    const itemsText = items
+      .map((item) => `${item.productName}(${item.size})×${item.quantity}`)
+      .join(" / ");
+
+    lines.push(
+      [
+        escapeCsvField(order.createdAt),
+        escapeCsvField(order.guardianName),
+        escapeCsvField(itemsText),
+        escapeCsvField(total),
+      ].join(","),
+    );
   }
 
   // Excelでの文字化けを防ぐためUTF-8 BOMを付与
