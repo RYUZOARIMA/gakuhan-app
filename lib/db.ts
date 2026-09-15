@@ -106,6 +106,24 @@ async function runSchemaDdl(client: PoolClient) {
       unit_price INTEGER NOT NULL,
       quantity INTEGER NOT NULL
     );
+
+    -- 注文送信前のメールアドレス確認（いたずら注文防止）。確認コード照合が
+    -- 成功するまではordersテーブルに実データを作らず、ここに一時保存する。
+    CREATE TABLE IF NOT EXISTS order_verifications (
+      id TEXT PRIMARY KEY,
+      school_id TEXT NOT NULL REFERENCES schools(id),
+      email TEXT NOT NULL,
+      code_hash TEXT NOT NULL,
+      payload JSONB NOT NULL,
+      name_image BYTEA,
+      name_image_type TEXT,
+      attempts INTEGER NOT NULL DEFAULT 0,
+      resend_count INTEGER NOT NULL DEFAULT 0,
+      last_sent_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+      expires_at TIMESTAMPTZ NOT NULL,
+      consumed_at TIMESTAMPTZ,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    );
   `);
 
   // 既存DB(name_image列追加前)への後方互換

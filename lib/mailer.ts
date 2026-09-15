@@ -64,3 +64,38 @@ ${itemLines}
     text,
   });
 }
+
+// いたずら注文防止のため、注文送信前に保護者のメールアドレス宛に確認コードを送る。
+// 管理者向け通知（sendOrderNotification）と異なりSMTP未設定時は黙って諦めず、
+// 呼び出し元がエラーとして扱えるよう例外を投げる。
+export async function sendOrderVerificationCode(params: {
+  to: string;
+  schoolName: string;
+  code: string;
+  studentName: string;
+}) {
+  const transport = getTransport();
+  if (!transport) {
+    console.error(
+      "[mailer] SMTP is not configured. Cannot send verification code to",
+      params.to,
+    );
+    throw new Error("メール送信の設定が完了していません。学校販売担当にご連絡ください。");
+  }
+
+  const text = `${params.schoolName} オンライン注文フォームの確認コードです。
+
+生徒氏名: ${params.studentName}
+確認コード: ${params.code}
+
+このコードは発行から10分間有効です。注文フォームの画面で入力してください。
+このメールにお心当たりがない場合は、そのまま破棄していただいて問題ありません。
+`;
+
+  await transport.sendMail({
+    from: process.env.SMTP_FROM,
+    to: params.to,
+    subject: `[学販] 注文確認コード - ${params.schoolName}`,
+    text,
+  });
+}

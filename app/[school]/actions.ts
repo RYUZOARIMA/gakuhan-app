@@ -2,8 +2,12 @@
 
 import { z } from "zod";
 import { getSchoolBySlug } from "@/lib/schools";
-import { createOrder } from "@/lib/orders";
 import { sendOrderNotification } from "@/lib/mailer";
+import {
+  createOrderVerification,
+  confirmOrderVerification,
+  resendOrderVerificationCode,
+} from "@/lib/order-verification";
 
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
 
@@ -24,22 +28,69 @@ const orderSchema = z.object({
   items: z.array(itemSchema).min(1, "1点以上選択してください"),
 });
 
-export type OrderFormState = {
-  ok: boolean;
-  error?: string;
-  orderId?: string;
-};
+export type OrderFormState =
+  | { stage: "form"; error?: string }
+  | { stage: "verify"; verificationId: string; email: string; error?: string; notice?: string }
+  | { stage: "done"; orderId: string };
 
-export async function submitOrder(
+function maskEmail(email: string): string {
+  const [local, domain] = email.split("@");
+  if (!domain) return email;
+  const visible = local.slice(0, Math.min(2, local.length));
+  return `${visible}${"*".repeat(Math.max(local.length - visible.length, 1))}@${domain}`;
+}
+
+export async function orderAction(
   schoolSlug: string,
-  _prevState: OrderFormState,
+  prevState: OrderFormState,
   formData: FormData,
 ): Promise<OrderFormState> {
   const school = await getSchoolBySlug(schoolSlug);
   if (!school) {
-    return { ok: false, error: "学校が見つかりません" };
+    return { stage: "form", error: "学校が見つかりません" };
   }
 
+  const intent = String(formData.get("intent") ?? "request");
+
+  if (intent === "resend") {
+    if (prevState.stage !== "verify") {
+      return { stage: "form", error: "もう一度注文内容を入力してください。" };
+    }
+    const result = await resendOrderVerificationCode(prevState.verificationId, school.name);
+    if (!result.ok) {
+      return { ...prevState, error: result.error, notice: undefined };
+    }
+    return { ...prevState, error: undefined, notice: "確認コードを再送信しました。" };
+  }
+
+  if (intent === "confirm") {
+    if (prevState.stage !== "verify") {
+      return { stage: "form", error: "もう一度注文内容を入力してください。" };
+    }
+    const code = String(formData.get("code") ?? "").trim();
+    if (!/^\d{6}$/.test(code)) {
+      return { ...prevState, error: "6桁の確認コードを入力してください", notice: undefined };
+    }
+
+    const result = await confirmOrderVerification(prevState.verificationId, code);
+    if (!result.ok) {
+      return { ...prevState, error: result.error, notice: undefined };
+    }
+
+    try {
+      await sendOrderNotification({
+        schoolName: school.name,
+        order: result.order,
+        ...result.customer,
+      });
+    } catch (error) {
+      console.error("[orderAction] admin notification failed", error);
+    }
+
+    return { stage: "done", orderId: result.order.id };
+  }
+
+  // intent === "request"：注文内容の初回送信 → 確認コードをメール送信
   const variantIds = formData.getAll("variantId");
   const quantities = formData.getAll("quantity");
 
@@ -63,17 +114,17 @@ export async function submitOrder(
   });
 
   if (!parsed.success) {
-    return { ok: false, error: parsed.error.issues[0]?.message ?? "入力内容を確認してください" };
+    return { stage: "form", error: parsed.error.issues[0]?.message ?? "入力内容を確認してください" };
   }
 
   const nameImageFile = formData.get("nameImage");
   let nameImage: { data: Buffer; contentType: string } | undefined;
   if (nameImageFile instanceof File && nameImageFile.size > 0) {
     if (!nameImageFile.type.startsWith("image/")) {
-      return { ok: false, error: "手書き氏名の画像は画像ファイルを選択してください" };
+      return { stage: "form", error: "手書き氏名の画像は画像ファイルを選択してください" };
     }
     if (nameImageFile.size > MAX_IMAGE_BYTES) {
-      return { ok: false, error: "手書き氏名の画像は5MB以下にしてください" };
+      return { stage: "form", error: "手書き氏名の画像は5MB以下にしてください" };
     }
     nameImage = {
       data: Buffer.from(await nameImageFile.arrayBuffer()),
@@ -82,25 +133,19 @@ export async function submitOrder(
   }
 
   try {
-    const order = await createOrder({
+    const { verificationId, email } = await createOrderVerification({
       schoolId: school.id,
+      schoolName: school.name,
       ...parsed.data,
       nameImage,
     });
 
-    await sendOrderNotification({
-      schoolName: school.name,
-      order,
-      studentName: parsed.data.studentName,
-      grade: parsed.data.grade,
-      guardianName: parsed.data.guardianName,
-      phone: parsed.data.phone,
-      email: parsed.data.email,
-    });
-
-    return { ok: true, orderId: order.id };
+    return { stage: "verify", verificationId, email: maskEmail(email) };
   } catch (error) {
-    console.error("[submitOrder] failed", error);
-    return { ok: false, error: "注文の送信に失敗しました。時間をおいて再度お試しください。" };
+    console.error("[orderAction] failed to send verification code", error);
+    return {
+      stage: "form",
+      error: "確認コードの送信に失敗しました。時間をおいて再度お試しください。",
+    };
   }
 }

@@ -4,7 +4,7 @@ import { useActionState, useState } from "react";
 import type { Product } from "@/lib/schools";
 import type { OrderFormState } from "./actions";
 
-const initialState: OrderFormState = { ok: false };
+const initialState: OrderFormState = { stage: "form" };
 
 function ProductRow({ product }: { product: Product }) {
   const [variantId, setVariantId] = useState(product.variants[0]?.id ?? "");
@@ -65,7 +65,7 @@ export function OrderForm({
 }) {
   const [state, formAction, pending] = useActionState(action, initialState);
 
-  if (state.ok) {
+  if (state.stage === "done") {
     return (
       <div className="mt-8 rounded-lg border border-emerald-200 bg-emerald-50 px-5 py-4 text-emerald-900 dark:border-emerald-900 dark:bg-emerald-950 dark:text-emerald-100">
         <p className="font-medium">ご注文ありがとうございました。</p>
@@ -79,10 +79,68 @@ export function OrderForm({
     );
   }
 
+  if (state.stage === "verify") {
+    return (
+      <form action={formAction} className="mt-8 flex flex-col gap-4">
+        <input type="hidden" name="intent" value="confirm" />
+        <div className="rounded-lg border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-950">
+          <p className="font-medium text-zinc-900 dark:text-zinc-50">確認コードを送信しました</p>
+          <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
+            {state.email} 宛に6桁の確認コードを送信しました。メールに記載のコードを入力し、注文を確定してください。（有効期限10分）
+          </p>
+
+          <label className="mt-4 flex flex-col gap-1 text-sm text-zinc-700 dark:text-zinc-300">
+            確認コード
+            <input
+              type="text"
+              name="code"
+              inputMode="numeric"
+              pattern="\d{6}"
+              maxLength={6}
+              placeholder="123456"
+              required
+              autoFocus
+              className="w-32 rounded border border-zinc-300 px-3 py-2 tracking-widest dark:border-zinc-700 dark:bg-zinc-900"
+            />
+          </label>
+
+          {state.error && (
+            <p className="mt-3 text-sm text-red-600 dark:text-red-400">{state.error}</p>
+          )}
+          {state.notice && (
+            <p className="mt-3 text-sm text-emerald-600 dark:text-emerald-400">{state.notice}</p>
+          )}
+
+          <div className="mt-4 flex flex-wrap items-center gap-3">
+            <button
+              type="submit"
+              name="intent"
+              value="confirm"
+              disabled={pending}
+              className="rounded-full bg-zinc-900 px-6 py-3 font-medium text-white transition-colors hover:bg-zinc-700 disabled:opacity-50 dark:bg-zinc-50 dark:text-zinc-900"
+            >
+              {pending ? "確認中..." : "注文を確定する"}
+            </button>
+            <button
+              type="submit"
+              name="intent"
+              value="resend"
+              disabled={pending}
+              className="text-sm font-medium text-zinc-600 hover:text-zinc-900 disabled:opacity-50 dark:text-zinc-400 dark:hover:text-zinc-100"
+            >
+              コードを再送信する
+            </button>
+          </div>
+        </div>
+      </form>
+    );
+  }
+
   const categories = [...new Set(products.map((p) => p.category))];
 
   return (
     <form action={formAction} className="mt-8 flex flex-col gap-8">
+      <input type="hidden" name="intent" value="request" />
       {categories.map((category) => (
         <fieldset key={category} className="flex flex-col gap-3">
           <legend className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">
@@ -208,7 +266,7 @@ export function OrderForm({
         disabled={pending}
         className="rounded-full bg-zinc-900 px-6 py-3 font-medium text-white transition-colors hover:bg-zinc-700 disabled:opacity-50 dark:bg-zinc-50 dark:text-zinc-900"
       >
-        {pending ? "送信中..." : "注文を送信する"}
+        {pending ? "送信中..." : "確認コードを送信する"}
       </button>
     </form>
   );
