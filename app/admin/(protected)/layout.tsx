@@ -18,6 +18,7 @@ export default async function AdminProtectedLayout({
           <Link href="/admin/orders">注文一覧</Link>
           <Link href="/admin/products">商品・価格管理</Link>
           <Link href="/admin/summary">発注集計</Link>
+          <Link href="/admin/deadline">期限別集計</Link>
         </nav>
         <form action={logoutAction}>
           <button

@@ -242,8 +242,37 @@ type PurchaseSummaryRowRaw = {
   totalquantity: string;
 };
 
-export async function getPurchaseSummary(schoolId: string): Promise<PurchaseSummaryRow[]> {
+// 発注締切に合わせて「その期間内に届いた注文」だけを絞り込むための期間指定。
+// toはその日を含める（呼び出し元でtoの翌日0時に変換してから渡す）。
+export type DateRange = { from?: string; to?: string };
+
+function rangeBounds(range?: DateRange): [string | null, string | null] {
+  const from = range?.from ? new Date(`${range.from}T00:00:00`).toISOString() : null;
+  const to = range?.to
+    ? new Date(new Date(`${range.to}T00:00:00`).getTime() + 24 * 60 * 60 * 1000).toISOString()
+    : null;
+  return [from, to];
+}
+
+export async function countOrders(schoolId: string, range?: DateRange): Promise<number> {
   await schemaReady;
+  const [from, to] = rangeBounds(range);
+  const result = await pool.query<{ n: number }>(
+    `SELECT count(*)::int AS n FROM orders
+     WHERE school_id = $1
+       AND ($2::timestamptz IS NULL OR created_at >= $2::timestamptz)
+       AND ($3::timestamptz IS NULL OR created_at < $3::timestamptz)`,
+    [schoolId, from, to],
+  );
+  return result.rows[0]?.n ?? 0;
+}
+
+export async function getPurchaseSummary(
+  schoolId: string,
+  range?: DateRange,
+): Promise<PurchaseSummaryRow[]> {
+  await schemaReady;
+  const [from, to] = rangeBounds(range);
   const result = await pool.query<PurchaseSummaryRowRaw>(
     `SELECT p.category as category, oi.product_name as productName, oi.size as size,
             oi.unit_price as unitPrice, SUM(oi.quantity) as totalQuantity
@@ -251,9 +280,11 @@ export async function getPurchaseSummary(schoolId: string): Promise<PurchaseSumm
      JOIN orders o ON o.id = oi.order_id
      LEFT JOIN products p ON p.name = oi.product_name AND p.school_id = o.school_id
      WHERE o.school_id = $1
+       AND ($2::timestamptz IS NULL OR o.created_at >= $2::timestamptz)
+       AND ($3::timestamptz IS NULL OR o.created_at < $3::timestamptz)
      GROUP BY p.category, oi.product_name, oi.size, oi.unit_price, p.sort_order
      ORDER BY p.sort_order, oi.product_name, oi.size`,
-    [schoolId],
+    [schoolId, from, to],
   );
 
   return result.rows.map((row) => {

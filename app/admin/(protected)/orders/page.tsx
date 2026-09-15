@@ -1,5 +1,7 @@
 import { listSchools } from "@/lib/schools";
 import { listOrderItems, listOrders, type CreatedOrderItem, type OrderRow } from "@/lib/orders";
+import { deleteOrderAction } from "../actions";
+import { DeleteOrderButton } from "./delete-order-button";
 
 type SchoolWithOrders = {
   school: Awaited<ReturnType<typeof listSchools>>[number];
@@ -62,9 +64,16 @@ export default async function AdminOrdersPage() {
                 <p className="font-medium text-zinc-900 dark:text-zinc-50">
                   {order.studentName}　（{order.studentFurigana}） 様（{order.grade}）
                 </p>
-                <p className="text-xs text-zinc-500 dark:text-zinc-400">
-                  {order.createdAt}
-                </p>
+                <div className="flex items-center gap-3">
+                  <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                    {order.createdAt}
+                  </p>
+                  <DeleteOrderButton
+                    orderId={order.id}
+                    studentName={order.studentName}
+                    action={deleteOrderAction}
+                  />
+                </div>
               </div>
               {order.nameNote && (
                 <p className="mt-2 rounded border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-100">

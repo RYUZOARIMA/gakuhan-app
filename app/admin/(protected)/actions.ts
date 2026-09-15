@@ -346,6 +346,22 @@ export async function replaceHyugaGakuin2026CatalogAction(formData: FormData) {
   revalidatePath("/admin/products");
 }
 
+// テスト注文など不要になった注文を完全に削除する。商品削除と異なり、注文より
+// 下流を参照するテーブルがないため確認なしでそのまま削除できる。
+export async function deleteOrderAction(formData: FormData) {
+  const orderId = String(formData.get("orderId"));
+  if (!orderId) return;
+
+  await schemaReady;
+
+  await pool.query("DELETE FROM order_items WHERE order_id = $1", [orderId]);
+  await pool.query("DELETE FROM orders WHERE id = $1", [orderId]);
+
+  revalidatePath("/admin/orders");
+  revalidatePath("/admin/summary");
+  revalidatePath("/admin/deadline");
+}
+
 export async function addProductAction(formData: FormData) {
   const schoolId = String(formData.get("schoolId"));
   const category = String(formData.get("category") ?? "").trim();
