@@ -5,7 +5,13 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { destroyAdminSession } from "@/lib/admin-auth";
 import { pool, schemaReady } from "@/lib/db";
-import { setSchoolLogo, deleteSchoolLogo } from "@/lib/schools";
+import {
+  setSchoolLogo,
+  deleteSchoolLogo,
+  touchSchoolUpdatedAt,
+  touchSchoolUpdatedAtByProductId,
+  touchSchoolUpdatedAtByVariantId,
+} from "@/lib/schools";
 
 export async function logoutAction() {
   await destroyAdminSession();
@@ -70,6 +76,7 @@ export async function updateVariantPriceAction(formData: FormData) {
     Math.round(price),
     variantId,
   ]);
+  await touchSchoolUpdatedAtByVariantId(variantId);
 
   revalidatePath("/admin/products");
 }
@@ -84,6 +91,7 @@ export async function toggleVariantActiveAction(formData: FormData) {
     active ? 1 : 0,
     variantId,
   ]);
+  await touchSchoolUpdatedAtByVariantId(variantId);
 
   revalidatePath("/admin/products");
 }
@@ -98,6 +106,7 @@ export async function toggleProductActiveAction(formData: FormData) {
     active ? 1 : 0,
     productId,
   ]);
+  await touchSchoolUpdatedAtByProductId(productId);
 
   revalidatePath("/admin/products");
 }
@@ -124,6 +133,7 @@ export async function deleteProductAction(formData: FormData) {
     );
   }
 
+  await touchSchoolUpdatedAtByProductId(productId);
   await pool.query("DELETE FROM product_variants WHERE product_id = $1", [productId]);
   await pool.query("DELETE FROM products WHERE id = $1", [productId]);
 
@@ -149,6 +159,7 @@ export async function addVariantAction(formData: FormData) {
     "INSERT INTO product_variants (id, product_id, size, price, sort_order) VALUES ($1, $2, $3, $4, $5)",
     [randomUUID(), productId, size, Math.round(price), maxSort + 1],
   );
+  await touchSchoolUpdatedAtByProductId(productId);
 
   revalidatePath("/admin/products");
 }
@@ -392,6 +403,7 @@ export async function replaceHyugaGakuin2026CatalogAction(formData: FormData) {
     }
   }
 
+  await touchSchoolUpdatedAt(schoolId);
   revalidatePath("/admin/products");
 }
 
@@ -429,6 +441,7 @@ export async function addProductAction(formData: FormData) {
     "INSERT INTO products (id, school_id, category, name, sort_order) VALUES ($1, $2, $3, $4, $5)",
     [randomUUID(), schoolId, category, name, maxSort + 1],
   );
+  await touchSchoolUpdatedAt(schoolId);
 
   revalidatePath("/admin/products");
 }

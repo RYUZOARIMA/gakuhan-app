@@ -395,13 +395,41 @@ export function getSchoolBySlug(slug: string): Promise<School | undefined> {
   });
 }
 
+// 最近更新(校章・商品・価格など)した学校が一覧の上に来るようにする
 export function listSchools(): Promise<School[]> {
   return ready.then(async () => {
     const result = await pool.query<SchoolRowRaw>(
-      `SELECT ${SCHOOL_SELECT_COLUMNS} FROM schools`,
+      `SELECT ${SCHOOL_SELECT_COLUMNS} FROM schools ORDER BY updated_at DESC`,
     );
     return result.rows.map(mapSchoolRow);
   });
+}
+
+export async function touchSchoolUpdatedAt(schoolId: string): Promise<void> {
+  await schemaReady;
+  await pool.query("UPDATE schools SET updated_at = now() WHERE id = $1", [schoolId]);
+}
+
+export async function touchSchoolUpdatedAtByProductId(productId: string): Promise<void> {
+  await schemaReady;
+  await pool.query(
+    `UPDATE schools SET updated_at = now()
+     WHERE id = (SELECT school_id FROM products WHERE id = $1)`,
+    [productId],
+  );
+}
+
+export async function touchSchoolUpdatedAtByVariantId(variantId: string): Promise<void> {
+  await schemaReady;
+  await pool.query(
+    `UPDATE schools SET updated_at = now()
+     WHERE id = (
+       SELECT p.school_id FROM product_variants pv
+       JOIN products p ON p.id = pv.product_id
+       WHERE pv.id = $1
+     )`,
+    [variantId],
+  );
 }
 
 export async function getSchoolLogo(
@@ -424,7 +452,7 @@ export async function setSchoolLogo(
 ): Promise<void> {
   await schemaReady;
   await pool.query(
-    "UPDATE schools SET logo = $1, logo_type = $2, logo_updated_at = now() WHERE id = $3",
+    "UPDATE schools SET logo = $1, logo_type = $2, logo_updated_at = now(), updated_at = now() WHERE id = $3",
     [data, contentType, schoolId],
   );
 }
@@ -432,7 +460,7 @@ export async function setSchoolLogo(
 export async function deleteSchoolLogo(schoolId: string): Promise<void> {
   await schemaReady;
   await pool.query(
-    "UPDATE schools SET logo = NULL, logo_type = NULL, logo_updated_at = now() WHERE id = $1",
+    "UPDATE schools SET logo = NULL, logo_type = NULL, logo_updated_at = now(), updated_at = now() WHERE id = $1",
     [schoolId],
   );
 }

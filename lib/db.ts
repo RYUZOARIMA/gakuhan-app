@@ -157,6 +157,11 @@ async function runSchemaDdl(client: PoolClient) {
     ALTER TABLE schools ADD COLUMN IF NOT EXISTS logo_type TEXT;
     ALTER TABLE schools ADD COLUMN IF NOT EXISTS logo_updated_at TIMESTAMPTZ;
   `);
+
+  // 学校一覧を「最近更新した学校が上」の順で出すための更新日時列
+  await client.query(`
+    ALTER TABLE schools ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT now();
+  `);
 }
 
 // 接続の瞬断などで初期化に失敗した場合、そのPromiseを永久にキャッシュしてしまうと
