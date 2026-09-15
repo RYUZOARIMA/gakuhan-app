@@ -272,7 +272,16 @@ async function ensureSeedData() {
   }
 }
 
-const ready = schemaReady.then(() => ensureSeedData());
+// schemaReadyと同様、失敗をそのままキャッシュすると復旧するまでこのインスタンスへの
+// 全リクエストが失敗し続けるため、reject時は次回呼び出しで再試行できるようにする。
+function createReady(): Promise<void> {
+  return schemaReady.then(() => ensureSeedData()).catch((err) => {
+    ready = createReady();
+    throw err;
+  });
+}
+
+let ready = createReady();
 
 export function getSchoolBySlug(slug: string): Promise<School | undefined> {
   return ready.then(async () => {

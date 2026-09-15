@@ -24,6 +24,12 @@ export const pool =
     idleTimeoutMillis: 10_000,
   });
 
+// pgのPoolはアイドル中のクライアントが接続断等でエラーを出すと'error'イベントを
+// 発行する。リスナーがないとNodeのプロセスごと落ちてしまうため、必ず拾っておく。
+pool.on("error", (err) => {
+  console.error("Unexpected error on idle PostgreSQL client", err);
+});
+
 if (process.env.NODE_ENV !== "production") {
   globalForDb.pgPool = pool;
 }
@@ -109,7 +115,17 @@ async function runSchemaDdl(client: PoolClient) {
   `);
 }
 
-export const schemaReady = globalForDb.schemaReady ?? initSchema();
+// 接続の瞬断などで初期化に失敗した場合、そのPromiseを永久にキャッシュしてしまうと
+// 同じサーバーインスタンスへの以降のリクエストが全て失敗し続ける（再起動まで復旧しない）。
+// 失敗時は次回呼び出しで再試行できるよう、reject時にキャッシュを作り直す。
+function createSchemaReady(): Promise<void> {
+  return initSchema().catch((err) => {
+    schemaReady = createSchemaReady();
+    throw err;
+  });
+}
+
+export let schemaReady = globalForDb.schemaReady ?? createSchemaReady();
 
 if (process.env.NODE_ENV !== "production") {
   globalForDb.schemaReady = schemaReady;
