@@ -212,7 +212,7 @@ const SEED_SCHOOLS: {
       },
       {
         category: "トレーニングウェア",
-        name: "ウィンドブレーカー（上下）",
+        name: "日章学園サッカー ウィンドブレーカー上下",
         variants: [
           { size: "S", price: 8000 },
           { size: "M", price: 8000 },
@@ -249,9 +249,12 @@ async function ensureSeedData() {
 
     for (const [productIndex, product] of seedSchool.products.entries()) {
       const productId = `seed-product-${seedSchool.slug}-${productIndex}`;
+      // category/name/sort_orderはコード側を正として同期する
+      // (価格・公開状態は管理画面で編集するためactive列やvariantsのDO NOTHINGはそのまま維持)。
       await pool.query(
         `INSERT INTO products (id, school_id, category, name, sort_order)
-         VALUES ($1, $2, $3, $4, $5) ON CONFLICT (id) DO NOTHING`,
+         VALUES ($1, $2, $3, $4, $5)
+         ON CONFLICT (id) DO UPDATE SET category = $3, name = $4, sort_order = $5`,
         [productId, schoolId, product.category, product.name, productIndex],
       );
 
