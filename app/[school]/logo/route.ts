@@ -15,10 +15,14 @@ export async function GET(
     return new Response("Not found", { status: 404 });
   }
 
+  // 長めのpublicキャッシュにしていると、差し替え後もVercelのエッジやブラウザに
+  // 古い画像が残り続けて「アップロードしたのに前のファイルが表示される」状態に
+  // なるため、毎回最新のDBの内容を返すようにする（校章は小さい画像かつ
+  // アクセス頻度もそこまで高くないため、キャッシュなしで問題ない）。
   return new Response(new Uint8Array(logo.data), {
     headers: {
       "Content-Type": logo.contentType,
-      "Cache-Control": "public, max-age=3600",
+      "Cache-Control": "no-store",
     },
   });
 }
