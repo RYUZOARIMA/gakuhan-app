@@ -28,27 +28,26 @@ export async function GET(
 
   const orders = await listOrders(schoolId);
 
-  const header = ["日時", "注文者", "注文内容", "総額"];
+  const header = ["日時", "注文者", "商品名", "サイズ", "単価", "数量", "総額"];
   const lines = [header.join(",")];
 
   for (const order of orders) {
     const items = await listOrderItems(order.id);
     const total = items.reduce((sum, item) => sum + item.unitPrice * item.quantity, 0);
-    const itemsText = items
-      .map(
-        (item) =>
-          `${item.productName}(${item.size}) 単価${item.unitPrice.toLocaleString()}円×${item.quantity}`,
-      )
-      .join(" / ");
 
-    lines.push(
-      [
-        escapeCsvField(order.createdAt),
-        escapeCsvField(order.guardianName),
-        escapeCsvField(itemsText),
-        escapeCsvField(total),
-      ].join(","),
-    );
+    for (const item of items) {
+      lines.push(
+        [
+          escapeCsvField(order.createdAt),
+          escapeCsvField(order.guardianName),
+          escapeCsvField(item.productName),
+          escapeCsvField(item.size),
+          escapeCsvField(item.unitPrice),
+          escapeCsvField(item.quantity),
+          escapeCsvField(total),
+        ].join(","),
+      );
+    }
   }
 
   // Excelでの文字化けを防ぐためUTF-8 BOMを付与
