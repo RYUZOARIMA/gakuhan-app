@@ -1,6 +1,6 @@
 import { isAdminAuthenticated } from "@/lib/admin-auth";
 import { listOrderItems, listOrders } from "@/lib/orders";
-import { listSchools } from "@/lib/schools";
+import { listAllProducts, listSchools } from "@/lib/schools";
 
 function escapeCsvField(value: string | number): string {
   const s = String(value);
@@ -27,28 +27,53 @@ export async function GET(
   }
 
   const orders = await listOrders(schoolId);
+  const products = await listAllProducts(schoolId);
 
-  const header = ["商品名", "サイズ", "日時", "注文者", "単価", "数量", "総額"];
-  const lines = [header.join(",")];
-
-  for (const order of orders) {
-    const items = await listOrderItems(order.id);
-    const total = items.reduce((sum, item) => sum + item.unitPrice * item.quantity, 0);
-
-    for (const item of items) {
-      lines.push(
-        [
-          escapeCsvField(item.productName),
-          escapeCsvField(item.size),
-          escapeCsvField(order.createdAt),
-          escapeCsvField(order.guardianName),
-          escapeCsvField(item.unitPrice),
-          escapeCsvField(item.quantity),
-          escapeCsvField(total),
-        ].join(","),
-      );
+  // 商品を列にする(1商品=1列)。列順はまず現在のカタログのsort_order順、
+  // 商品名変更・削除等で現カタログにない過去の商品名は末尾に追加し、
+  // 過去の注文データが列から漏れないようにする。
+  const productColumns: string[] = [];
+  const seenProductNames = new Set<string>();
+  for (const product of products) {
+    if (!seenProductNames.has(product.name)) {
+      seenProductNames.add(product.name);
+      productColumns.push(product.name);
     }
   }
+
+  const orderItems = await Promise.all(
+    orders.map((order) => listOrderItems(order.id)),
+  );
+  for (const items of orderItems) {
+    for (const item of items) {
+      if (!seenProductNames.has(item.productName)) {
+        seenProductNames.add(item.productName);
+        productColumns.push(item.productName);
+      }
+    }
+  }
+
+  const header = ["日時", "注文者", ...productColumns, "総額"];
+  const lines = [header.join(",")];
+
+  orders.forEach((order, i) => {
+    const items = orderItems[i];
+    const total = items.reduce((sum, item) => sum + item.unitPrice * item.quantity, 0);
+
+    const productCells = productColumns.map((productName) => {
+      const matching = items.filter((item) => item.productName === productName);
+      return matching.map((item) => `${item.size}×${item.quantity}`).join(" / ");
+    });
+
+    lines.push(
+      [
+        escapeCsvField(order.createdAt),
+        escapeCsvField(order.guardianName),
+        ...productCells.map(escapeCsvField),
+        escapeCsvField(total),
+      ].join(","),
+    );
+  });
 
   // Excelでの文字化けを防ぐためUTF-8 BOMを付与
   const csv = "﻿" + lines.join("\r\n") + "\r\n";
