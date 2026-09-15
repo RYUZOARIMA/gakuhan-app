@@ -28,7 +28,7 @@ export async function GET(
 
   const orders = await listOrders(schoolId);
 
-  const header = ["日時", "注文者", "商品名", "サイズ", "単価", "数量", "総額"];
+  const header = ["商品名", "サイズ", "日時", "注文者", "単価", "数量", "総額"];
   const lines = [header.join(",")];
 
   for (const order of orders) {
@@ -38,10 +38,10 @@ export async function GET(
     for (const item of items) {
       lines.push(
         [
-          escapeCsvField(order.createdAt),
-          escapeCsvField(order.guardianName),
           escapeCsvField(item.productName),
           escapeCsvField(item.size),
+          escapeCsvField(order.createdAt),
+          escapeCsvField(order.guardianName),
           escapeCsvField(item.unitPrice),
           escapeCsvField(item.quantity),
           escapeCsvField(total),
