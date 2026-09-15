@@ -35,7 +35,10 @@ export async function GET(
     const items = await listOrderItems(order.id);
     const total = items.reduce((sum, item) => sum + item.unitPrice * item.quantity, 0);
     const itemsText = items
-      .map((item) => `${item.productName}(${item.size})×${item.quantity}`)
+      .map(
+        (item) =>
+          `${item.productName}(${item.size}) 単価${item.unitPrice.toLocaleString()}円×${item.quantity}`,
+      )
       .join(" / ");
 
     lines.push(
