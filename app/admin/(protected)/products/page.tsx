@@ -3,10 +3,12 @@ import {
   addProductAction,
   addVariantAction,
   deleteProductAction,
+  deleteSchoolLogoAction,
   replaceHyugaGakuin2026CatalogAction,
   toggleProductActiveAction,
   toggleVariantActiveAction,
   updateVariantPriceAction,
+  uploadSchoolLogoAction,
 } from "../actions";
 import { DeleteProductButton } from "./delete-product-button";
 
@@ -46,6 +48,51 @@ export default async function AdminProductsPage({
             <h2 className="text-lg font-medium text-zinc-900 dark:text-zinc-50">
               {school.name}
             </h2>
+
+            <div className="flex flex-wrap items-center gap-4 rounded-lg border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-950">
+              {school.hasLogo ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={`/${school.slug}/logo`}
+                  alt={`${school.name} 校章`}
+                  className="h-16 w-16 shrink-0 rounded border border-zinc-200 object-contain dark:border-zinc-800"
+                />
+              ) : (
+                <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded border border-dashed border-zinc-300 text-xs text-zinc-400 dark:border-zinc-700">
+                  未設定
+                </div>
+              )}
+              <form
+                action={uploadSchoolLogoAction}
+                className="flex flex-wrap items-center gap-2 text-sm"
+              >
+                <input type="hidden" name="schoolId" value={school.id} />
+                <input
+                  type="file"
+                  name="logo"
+                  accept="image/*"
+                  required
+                  className="text-xs text-zinc-600 dark:text-zinc-400"
+                />
+                <button
+                  type="submit"
+                  className="rounded border border-zinc-300 px-3 py-1 text-xs hover:bg-zinc-100 dark:border-zinc-700 dark:hover:bg-zinc-900"
+                >
+                  校章をアップロード
+                </button>
+              </form>
+              {school.hasLogo && (
+                <form action={deleteSchoolLogoAction}>
+                  <input type="hidden" name="schoolId" value={school.id} />
+                  <button
+                    type="submit"
+                    className="text-xs font-medium text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300"
+                  >
+                    校章を削除
+                  </button>
+                </form>
+              )}
+            </div>
 
             {school.slug === "hyuga-gakuin" && (
               <form

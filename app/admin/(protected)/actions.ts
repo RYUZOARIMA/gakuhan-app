@@ -5,10 +5,39 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { destroyAdminSession } from "@/lib/admin-auth";
 import { pool, schemaReady } from "@/lib/db";
+import { setSchoolLogo, deleteSchoolLogo } from "@/lib/schools";
 
 export async function logoutAction() {
   await destroyAdminSession();
   redirect("/admin/login");
+}
+
+const MAX_LOGO_BYTES = 3 * 1024 * 1024;
+
+export async function uploadSchoolLogoAction(formData: FormData) {
+  const schoolId = String(formData.get("schoolId"));
+  const file = formData.get("logo");
+  if (!schoolId || !(file instanceof File) || file.size === 0) return;
+
+  if (!file.type.startsWith("image/")) return;
+  if (file.size > MAX_LOGO_BYTES) return;
+
+  await setSchoolLogo(schoolId, Buffer.from(await file.arrayBuffer()), file.type);
+
+  revalidatePath("/admin/products");
+  revalidatePath("/");
+  revalidatePath("/[school]", "page");
+}
+
+export async function deleteSchoolLogoAction(formData: FormData) {
+  const schoolId = String(formData.get("schoolId"));
+  if (!schoolId) return;
+
+  await deleteSchoolLogo(schoolId);
+
+  revalidatePath("/admin/products");
+  revalidatePath("/");
+  revalidatePath("/[school]", "page");
 }
 
 export async function updateVariantPriceAction(formData: FormData) {

@@ -150,6 +150,12 @@ async function runSchemaDdl(client: PoolClient) {
     ALTER TABLE orders ADD COLUMN IF NOT EXISTS name_image BYTEA;
     ALTER TABLE orders ADD COLUMN IF NOT EXISTS name_image_type TEXT;
   `);
+
+  // 既存DB(校章ロゴ列追加前)への後方互換
+  await client.query(`
+    ALTER TABLE schools ADD COLUMN IF NOT EXISTS logo BYTEA;
+    ALTER TABLE schools ADD COLUMN IF NOT EXISTS logo_type TEXT;
+  `);
 }
 
 // 接続の瞬断などで初期化に失敗した場合、そのPromiseを永久にキャッシュしてしまうと

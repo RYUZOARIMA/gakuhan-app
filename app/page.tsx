@@ -19,8 +19,16 @@ export default async function Home() {
             <li key={school.id}>
               <Link
                 href={`/${school.slug}`}
-                className="block rounded-lg border border-zinc-200 bg-white px-5 py-4 font-medium text-zinc-900 transition-colors hover:border-zinc-400 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-50"
+                className="flex items-center gap-4 rounded-lg border border-zinc-200 bg-white px-5 py-4 font-medium text-zinc-900 transition-colors hover:border-zinc-400 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-50"
               >
+                {school.hasLogo && (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={`/${school.slug}/logo`}
+                    alt={`${school.name} 校章`}
+                    className="h-12 w-12 shrink-0 object-contain"
+                  />
+                )}
                 {school.name}
               </Link>
             </li>
