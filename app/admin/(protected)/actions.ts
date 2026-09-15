@@ -75,6 +75,174 @@ export async function addVariantAction(formData: FormData) {
   revalidatePath("/admin/products");
 }
 
+// 2026年3月の日向学院販売分：申込用紙の商品構成に合わせて商品を丸ごと入れ替える。
+// 既存注文のFK整合性を壊さないよう、旧商品は削除せず非公開化し、新商品を固定IDで追加する
+// （ON CONFLICT DO NOTHINGにより再実行しても安全）。
+const HYUGA_GAKUIN_2026_PRODUCTS: {
+  category: string;
+  name: string;
+  variants: { size: string; price: number }[];
+}[] = [
+  {
+    category: "トレーニングウェア",
+    name: "トレーニングシャツ",
+    variants: [
+      { size: "S", price: 5700 },
+      { size: "M", price: 5700 },
+      { size: "L", price: 5700 },
+      { size: "LL", price: 5700 },
+      { size: "3L", price: 5700 },
+      { size: "4L", price: 6200 },
+    ],
+  },
+  {
+    category: "トレーニングウェア",
+    name: "トレーニングパンツ",
+    variants: [
+      { size: "S", price: 5100 },
+      { size: "M", price: 5100 },
+      { size: "L", price: 5100 },
+      { size: "LL", price: 5100 },
+      { size: "3L", price: 5100 },
+      { size: "4L", price: 5600 },
+    ],
+  },
+  {
+    category: "トレーニングウェア",
+    name: "半袖シャツ",
+    variants: [
+      { size: "S", price: 4900 },
+      { size: "M", price: 4900 },
+      { size: "L", price: 4900 },
+      { size: "LL", price: 4900 },
+      { size: "3L", price: 4900 },
+      { size: "4L", price: 5300 },
+    ],
+  },
+  {
+    category: "トレーニングウェア",
+    name: "ハーフパンツ",
+    variants: [
+      { size: "S", price: 3800 },
+      { size: "M", price: 3800 },
+      { size: "L", price: 3800 },
+      { size: "LL", price: 3800 },
+      { size: "3L", price: 3800 },
+      { size: "4L", price: 4300 },
+    ],
+  },
+  {
+    category: "トレーニングウェア",
+    name: "長袖シャツ",
+    variants: [
+      { size: "S", price: 5300 },
+      { size: "M", price: 5300 },
+      { size: "L", price: 5300 },
+      { size: "LL", price: 5300 },
+      { size: "3L", price: 5300 },
+      { size: "4L", price: 5800 },
+    ],
+  },
+  {
+    category: "トレーニングウェア",
+    name: "体育帽子",
+    variants: [{ size: "フリー", price: 1200 }],
+  },
+  {
+    category: "靴",
+    name: "男子用ローファー",
+    variants: [{ size: "フリー", price: 5400 }],
+  },
+  {
+    category: "靴",
+    name: "女子用ローファー",
+    variants: [{ size: "フリー", price: 5200 }],
+  },
+  {
+    category: "靴",
+    name: "グランドシューズ",
+    variants: [{ size: "フリー", price: 4200 }],
+  },
+  {
+    category: "靴",
+    name: "体育館シューズ",
+    variants: [{ size: "フリー", price: 4450 }],
+  },
+  {
+    category: "靴",
+    name: "スリッパ",
+    variants: [{ size: "フリー", price: 1800 }],
+  },
+  {
+    category: "カバン",
+    name: "デイパック YC59045",
+    variants: [{ size: "フリー", price: 14000 }],
+  },
+  {
+    category: "カバン",
+    name: "デイパック YC59052",
+    variants: [{ size: "フリー", price: 14000 }],
+  },
+  {
+    category: "カバン",
+    name: "デイパック YC59048",
+    variants: [{ size: "フリー", price: 14000 }],
+  },
+  {
+    category: "カバン",
+    name: "ヘルメット",
+    variants: [{ size: "フリー", price: 5500 }],
+  },
+  {
+    category: "カバン",
+    name: "通学カバン",
+    variants: [{ size: "フリー", price: 10800 }],
+  },
+];
+
+export async function replaceHyugaGakuin2026CatalogAction(formData: FormData) {
+  const schoolId = String(formData.get("schoolId"));
+  if (!schoolId) return;
+
+  await schemaReady;
+
+  // 旧商品（制服・体操服のプレースホルダー等）を非公開化。削除しないのは、
+  // 既存注文のorder_itemsがvariant_idを参照しており、消すとFK違反になるため。
+  await pool.query("UPDATE products SET active = 0 WHERE school_id = $1", [schoolId]);
+  await pool.query(
+    `UPDATE product_variants SET active = 0
+     WHERE product_id IN (SELECT id FROM products WHERE school_id = $1)`,
+    [schoolId],
+  );
+
+  for (const [productIndex, product] of HYUGA_GAKUIN_2026_PRODUCTS.entries()) {
+    const productId = `hyuga-2026-product-${productIndex}`;
+    await pool.query(
+      `INSERT INTO products (id, school_id, category, name, sort_order)
+       VALUES ($1, $2, $3, $4, $5)
+       ON CONFLICT (id) DO UPDATE SET category = $3, name = $4, sort_order = $5, active = 1`,
+      [productId, schoolId, product.category, product.name, productIndex],
+    );
+
+    for (const [variantIndex, variant] of product.variants.entries()) {
+      await pool.query(
+        `INSERT INTO product_variants (id, product_id, size, price, sort_order)
+         VALUES ($1, $2, $3, $4, $5)
+         ON CONFLICT (id) DO UPDATE SET size = $3, price = $4, sort_order = $5, active = 1`,
+        [
+          `hyuga-2026-variant-${productIndex}-${variantIndex}`,
+          productId,
+          variant.size,
+          variant.price,
+          variantIndex,
+        ],
+      );
+    }
+  }
+
+  revalidatePath("/admin/products");
+}
+
 export async function addProductAction(formData: FormData) {
   const schoolId = String(formData.get("schoolId"));
   const category = String(formData.get("category") ?? "").trim();

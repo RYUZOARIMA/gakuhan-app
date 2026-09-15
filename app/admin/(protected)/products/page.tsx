@@ -2,6 +2,7 @@ import { listAllProducts, listSchools } from "@/lib/schools";
 import {
   addProductAction,
   addVariantAction,
+  replaceHyugaGakuin2026CatalogAction,
   toggleProductActiveAction,
   toggleVariantActiveAction,
   updateVariantPriceAction,
@@ -33,6 +34,24 @@ export default async function AdminProductsPage() {
             <h2 className="text-lg font-medium text-zinc-900 dark:text-zinc-50">
               {school.name}
             </h2>
+
+            {school.slug === "hyuga-gakuin" && (
+              <form
+                action={replaceHyugaGakuin2026CatalogAction}
+                className="rounded-lg border border-amber-300 bg-amber-50 p-4 text-sm dark:border-amber-800 dark:bg-amber-950"
+              >
+                <input type="hidden" name="schoolId" value={school.id} />
+                <p className="text-amber-900 dark:text-amber-200">
+                  2026年申込用紙の商品構成（トレーニングウェア・靴・カバン 全16品目）に一括で入れ替えます。既存の商品は非公開になり、新しい商品が追加されます（削除はされません）。
+                </p>
+                <button
+                  type="submit"
+                  className="mt-2 rounded border border-amber-400 bg-white px-3 py-1 text-xs font-medium text-amber-900 hover:bg-amber-100 dark:border-amber-700 dark:bg-amber-900 dark:text-amber-100 dark:hover:bg-amber-800"
+                >
+                  2026年商品リストに一括置き換え
+                </button>
+              </form>
+            )}
 
             {products.map((product) => (
               <div

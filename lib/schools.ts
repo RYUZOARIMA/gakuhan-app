@@ -27,65 +27,209 @@ export type Product = {
 
 // 3〜4月の販売直前で商品・価格が変わる可能性があるため、
 // ここには初回起動時のプレースホルダーだけを置き、実データは管理画面で編集する想定。
-const SEED_SCHOOL = { slug: "hyuga-gakuin", name: "日向学院" };
-
-const SEED_PRODUCTS: {
-  category: string;
+const SEED_SCHOOLS: {
+  slug: string;
   name: string;
-  variants: { size: string; price: number }[];
+  products: {
+    category: string;
+    name: string;
+    variants: { size: string; price: number }[];
+  }[];
 }[] = [
   {
-    category: "制服",
-    name: "上着（ブレザー）",
-    variants: [
-      { size: "150", price: 15000 },
-      { size: "160", price: 15000 },
-      { size: "170", price: 16000 },
+    slug: "hyuga-gakuin",
+    name: "日向学院",
+    products: [
+      {
+        category: "トレーニングウェア",
+        name: "トレーニングシャツ",
+        variants: [
+          { size: "S", price: 5700 },
+          { size: "M", price: 5700 },
+          { size: "L", price: 5700 },
+          { size: "LL", price: 5700 },
+          { size: "3L", price: 5700 },
+          { size: "4L", price: 6200 },
+        ],
+      },
+      {
+        category: "トレーニングウェア",
+        name: "トレーニングパンツ",
+        variants: [
+          { size: "S", price: 5100 },
+          { size: "M", price: 5100 },
+          { size: "L", price: 5100 },
+          { size: "LL", price: 5100 },
+          { size: "3L", price: 5100 },
+          { size: "4L", price: 5600 },
+        ],
+      },
+      {
+        category: "トレーニングウェア",
+        name: "半袖シャツ",
+        variants: [
+          { size: "S", price: 4900 },
+          { size: "M", price: 4900 },
+          { size: "L", price: 4900 },
+          { size: "LL", price: 4900 },
+          { size: "3L", price: 4900 },
+          { size: "4L", price: 5300 },
+        ],
+      },
+      {
+        category: "トレーニングウェア",
+        name: "ハーフパンツ",
+        variants: [
+          { size: "S", price: 3800 },
+          { size: "M", price: 3800 },
+          { size: "L", price: 3800 },
+          { size: "LL", price: 3800 },
+          { size: "3L", price: 3800 },
+          { size: "4L", price: 4300 },
+        ],
+      },
+      {
+        category: "トレーニングウェア",
+        name: "長袖シャツ",
+        variants: [
+          { size: "S", price: 5300 },
+          { size: "M", price: 5300 },
+          { size: "L", price: 5300 },
+          { size: "LL", price: 5300 },
+          { size: "3L", price: 5300 },
+          { size: "4L", price: 5800 },
+        ],
+      },
+      {
+        category: "トレーニングウェア",
+        name: "体育帽子",
+        variants: [{ size: "フリー", price: 1200 }],
+      },
+      {
+        category: "靴",
+        name: "男子用ローファー",
+        variants: [{ size: "フリー", price: 5400 }],
+      },
+      {
+        category: "靴",
+        name: "女子用ローファー",
+        variants: [{ size: "フリー", price: 5200 }],
+      },
+      {
+        category: "靴",
+        name: "グランドシューズ",
+        variants: [{ size: "フリー", price: 4200 }],
+      },
+      {
+        category: "靴",
+        name: "体育館シューズ",
+        variants: [{ size: "フリー", price: 4450 }],
+      },
+      {
+        category: "靴",
+        name: "スリッパ",
+        variants: [{ size: "フリー", price: 1800 }],
+      },
+      {
+        category: "カバン",
+        name: "デイパック YC59045",
+        variants: [{ size: "フリー", price: 14000 }],
+      },
+      {
+        category: "カバン",
+        name: "デイパック YC59052",
+        variants: [{ size: "フリー", price: 14000 }],
+      },
+      {
+        category: "カバン",
+        name: "デイパック YC59048",
+        variants: [{ size: "フリー", price: 14000 }],
+      },
+      {
+        category: "カバン",
+        name: "ヘルメット",
+        variants: [{ size: "フリー", price: 5500 }],
+      },
+      {
+        category: "カバン",
+        name: "通学カバン",
+        variants: [{ size: "フリー", price: 10800 }],
+      },
     ],
   },
   {
-    category: "制服",
-    name: "スラックス",
-    variants: [
-      { size: "S", price: 8000 },
-      { size: "M", price: 8000 },
-      { size: "L", price: 8500 },
-    ],
-  },
-  {
-    category: "制服",
-    name: "スカート",
-    variants: [
-      { size: "S", price: 8000 },
-      { size: "M", price: 8000 },
-      { size: "L", price: 8500 },
-    ],
-  },
-  {
-    category: "体操服",
-    name: "半袖シャツ",
-    variants: [
-      { size: "150", price: 3000 },
-      { size: "160", price: 3000 },
-      { size: "170", price: 3200 },
-    ],
-  },
-  {
-    category: "体操服",
-    name: "長袖シャツ",
-    variants: [
-      { size: "150", price: 3500 },
-      { size: "160", price: 3500 },
-      { size: "170", price: 3700 },
-    ],
-  },
-  {
-    category: "体操服",
-    name: "短パン",
-    variants: [
-      { size: "S", price: 2500 },
-      { size: "M", price: 2500 },
-      { size: "L", price: 2700 },
+    slug: "nissho-gakuen-soccer",
+    name: "日章学園サッカー部",
+    products: [
+      {
+        category: "ユニフォーム",
+        name: "ゲームシャツ",
+        variants: [
+          { size: "S", price: 6000 },
+          { size: "M", price: 6000 },
+          { size: "L", price: 6000 },
+          { size: "LL", price: 6500 },
+        ],
+      },
+      {
+        category: "ユニフォーム",
+        name: "ゲームパンツ",
+        variants: [
+          { size: "S", price: 4000 },
+          { size: "M", price: 4000 },
+          { size: "L", price: 4000 },
+          { size: "LL", price: 4500 },
+        ],
+      },
+      {
+        category: "ユニフォーム",
+        name: "ストッキング",
+        variants: [
+          { size: "S", price: 1500 },
+          { size: "M", price: 1500 },
+          { size: "L", price: 1500 },
+        ],
+      },
+      {
+        category: "トレーニングウェア",
+        name: "プラクティスシャツ（半袖）",
+        variants: [
+          { size: "S", price: 3000 },
+          { size: "M", price: 3000 },
+          { size: "L", price: 3000 },
+          { size: "LL", price: 3300 },
+        ],
+      },
+      {
+        category: "トレーニングウェア",
+        name: "ロングパンツ",
+        variants: [
+          { size: "S", price: 3500 },
+          { size: "M", price: 3500 },
+          { size: "L", price: 3500 },
+          { size: "LL", price: 3800 },
+        ],
+      },
+      {
+        category: "トレーニングウェア",
+        name: "ウィンドブレーカー（上下）",
+        variants: [
+          { size: "S", price: 8000 },
+          { size: "M", price: 8000 },
+          { size: "L", price: 8000 },
+          { size: "LL", price: 8500 },
+        ],
+      },
+      {
+        category: "グッズ",
+        name: "エコバッグ",
+        variants: [{ size: "フリー", price: 1500 }],
+      },
+      {
+        category: "グッズ",
+        name: "チームタオル",
+        variants: [{ size: "フリー", price: 1200 }],
+      },
     ],
   },
 ];
@@ -96,32 +240,34 @@ async function ensureSeedData() {
   // (各INSERTはON CONFLICT DO NOTHINGで冪等)。
 
   // 複数インスタンス間でも商品/バリアントIDが一致するよう固定IDでシードする。
-  const schoolId = `seed-school-${SEED_SCHOOL.slug}`;
-  await pool.query(
-    "INSERT INTO schools (id, slug, name) VALUES ($1, $2, $3) ON CONFLICT (id) DO NOTHING",
-    [schoolId, SEED_SCHOOL.slug, SEED_SCHOOL.name],
-  );
-
-  for (const [productIndex, product] of SEED_PRODUCTS.entries()) {
-    const productId = `seed-product-${productIndex}`;
+  for (const seedSchool of SEED_SCHOOLS) {
+    const schoolId = `seed-school-${seedSchool.slug}`;
     await pool.query(
-      `INSERT INTO products (id, school_id, category, name, sort_order)
-       VALUES ($1, $2, $3, $4, $5) ON CONFLICT (id) DO NOTHING`,
-      [productId, schoolId, product.category, product.name, productIndex],
+      "INSERT INTO schools (id, slug, name) VALUES ($1, $2, $3) ON CONFLICT (id) DO NOTHING",
+      [schoolId, seedSchool.slug, seedSchool.name],
     );
 
-    for (const [variantIndex, variant] of product.variants.entries()) {
+    for (const [productIndex, product] of seedSchool.products.entries()) {
+      const productId = `seed-product-${seedSchool.slug}-${productIndex}`;
       await pool.query(
-        `INSERT INTO product_variants (id, product_id, size, price, sort_order)
+        `INSERT INTO products (id, school_id, category, name, sort_order)
          VALUES ($1, $2, $3, $4, $5) ON CONFLICT (id) DO NOTHING`,
-        [
-          `seed-variant-${productIndex}-${variantIndex}`,
-          productId,
-          variant.size,
-          variant.price,
-          variantIndex,
-        ],
+        [productId, schoolId, product.category, product.name, productIndex],
       );
+
+      for (const [variantIndex, variant] of product.variants.entries()) {
+        await pool.query(
+          `INSERT INTO product_variants (id, product_id, size, price, sort_order)
+           VALUES ($1, $2, $3, $4, $5) ON CONFLICT (id) DO NOTHING`,
+          [
+            `seed-variant-${seedSchool.slug}-${productIndex}-${variantIndex}`,
+            productId,
+            variant.size,
+            variant.price,
+            variantIndex,
+          ],
+        );
+      }
     }
   }
 }
