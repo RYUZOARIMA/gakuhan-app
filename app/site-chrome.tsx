@@ -27,7 +27,7 @@ export function SiteFooter() {
   return (
     <footer className="border-t border-zinc-200 bg-white px-6 py-6 text-center text-sm text-zinc-600 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-400">
       <p className="font-medium text-zinc-800 dark:text-zinc-200">タダスポーツ</p>
-      <p className="mt-1">〒880-0841 宮崎県宮崎市吉村町曽師前甲甲3169-4</p>
+      <p className="mt-1">〒880-0841 宮崎県宮崎市吉村町曽師前甲3169-4</p>
       <p className="mt-1">電話番号: 0985-24-2639</p>
     </footer>
   );
