@@ -15,6 +15,10 @@ const globalForDb = globalThis as unknown as {
   schemaReady?: Promise<void>;
 };
 
+// タイムアウトを何も設定しないと、プーラー越しの接続断やロック待ちが発生した際に
+// クエリが無期限にハングし、Vercelの関数タイムアウト(300秒)いっぱいまでサイト全体が
+// 応答不能になる。各種タイムアウトを設定し、詰まった場合は早期にエラーとして
+// 失敗させることで、呼び出し元の再試行ロジック（createSchemaReady等）に委ねる。
 export const pool =
   globalForDb.pgPool ??
   new Pool({
@@ -22,6 +26,11 @@ export const pool =
     ssl: isLocal ? false : { rejectUnauthorized: false },
     max: 5,
     idleTimeoutMillis: 10_000,
+    connectionTimeoutMillis: 10_000,
+    statement_timeout: 15_000,
+    query_timeout: 20_000,
+    lock_timeout: 5_000,
+    idle_in_transaction_session_timeout: 10_000,
   });
 
 // pgのPoolはアイドル中のクライアントが接続断等でエラーを出すと'error'イベントを
