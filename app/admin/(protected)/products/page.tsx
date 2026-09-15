@@ -10,7 +10,12 @@ import {
 } from "../actions";
 import { DeleteProductButton } from "./delete-product-button";
 
-export default async function AdminProductsPage() {
+export default async function AdminProductsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ deleteError?: string }>;
+}) {
+  const { deleteError } = await searchParams;
   const schools = await listSchools();
   const schoolsWithProducts = await Promise.all(
     schools.map(async (school) => ({
@@ -28,6 +33,11 @@ export default async function AdminProductsPage() {
         <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
           販売直前の価格改定はここから反映できます。「公開」を外すと注文フォームに表示されなくなります。
         </p>
+        {deleteError && (
+          <p className="mt-3 rounded-lg border border-red-300 bg-red-50 p-3 text-sm text-red-800 dark:border-red-800 dark:bg-red-950 dark:text-red-200">
+            {deleteError}
+          </p>
+        )}
       </div>
 
       {schoolsWithProducts.map(({ school, products }) => {

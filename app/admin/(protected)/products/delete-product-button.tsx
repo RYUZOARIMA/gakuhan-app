@@ -19,6 +19,7 @@ export function DeleteProductButton({
       }}
     >
       <input type="hidden" name="productId" value={productId} />
+      <input type="hidden" name="productName" value={productName} />
       <button
         type="submit"
         className="text-xs font-medium text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300"

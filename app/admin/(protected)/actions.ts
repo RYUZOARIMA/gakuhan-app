@@ -57,6 +57,7 @@ export async function toggleProductActiveAction(formData: FormData) {
 // 持つ商品はFK違反を避けるため削除せずスキップする。
 export async function deleteProductAction(formData: FormData) {
   const productId = String(formData.get("productId"));
+  const productName = String(formData.get("productName") ?? "この商品");
   if (!productId) return;
 
   await schemaReady;
@@ -67,13 +68,18 @@ export async function deleteProductAction(formData: FormData) {
     [productId],
   );
   if ((referenced.rows[0]?.n ?? 0) > 0) {
-    return;
+    redirect(
+      `/admin/products?deleteError=${encodeURIComponent(
+        `「${productName}」は過去に注文実績があるため削除できません（注文履歴を壊さないための仕様です。表示から隠すには「非公開」のままにしてください）。`,
+      )}`,
+    );
   }
 
   await pool.query("DELETE FROM product_variants WHERE product_id = $1", [productId]);
   await pool.query("DELETE FROM products WHERE id = $1", [productId]);
 
   revalidatePath("/admin/products");
+  redirect("/admin/products");
 }
 
 export async function addVariantAction(formData: FormData) {
