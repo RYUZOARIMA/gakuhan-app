@@ -53,6 +53,29 @@ export async function toggleProductActiveAction(formData: FormData) {
   revalidatePath("/admin/products");
 }
 
+// 非公開の商品を完全に削除する。注文実績（order_items）があるバリアントを
+// 持つ商品はFK違反を避けるため削除せずスキップする。
+export async function deleteProductAction(formData: FormData) {
+  const productId = String(formData.get("productId"));
+  if (!productId) return;
+
+  await schemaReady;
+
+  const referenced = await pool.query<{ n: number }>(
+    `SELECT count(*)::int AS n FROM order_items
+     WHERE variant_id IN (SELECT id FROM product_variants WHERE product_id = $1)`,
+    [productId],
+  );
+  if ((referenced.rows[0]?.n ?? 0) > 0) {
+    return;
+  }
+
+  await pool.query("DELETE FROM product_variants WHERE product_id = $1", [productId]);
+  await pool.query("DELETE FROM products WHERE id = $1", [productId]);
+
+  revalidatePath("/admin/products");
+}
+
 export async function addVariantAction(formData: FormData) {
   const productId = String(formData.get("productId"));
   const size = String(formData.get("size") ?? "").trim();

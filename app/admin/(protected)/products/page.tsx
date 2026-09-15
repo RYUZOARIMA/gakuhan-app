@@ -2,11 +2,13 @@ import { listAllProducts, listSchools } from "@/lib/schools";
 import {
   addProductAction,
   addVariantAction,
+  deleteProductAction,
   replaceHyugaGakuin2026CatalogAction,
   toggleProductActiveAction,
   toggleVariantActiveAction,
   updateVariantPriceAction,
 } from "../actions";
+import { DeleteProductButton } from "./delete-product-button";
 
 export default async function AdminProductsPage() {
   const schools = await listSchools();
@@ -62,20 +64,29 @@ export default async function AdminProductsPage() {
                   <p className="font-medium text-zinc-900 dark:text-zinc-50">
                     [{product.category}] {product.name}
                   </p>
-                  <form action={toggleProductActiveAction}>
-                    <input type="hidden" name="productId" value={product.id} />
-                    <input
-                      type="hidden"
-                      name="active"
-                      value={(!product.active).toString()}
-                    />
-                    <button
-                      type="submit"
-                      className="text-xs font-medium text-zinc-500 hover:text-zinc-800 dark:text-zinc-400 dark:hover:text-zinc-100"
-                    >
-                      {product.active ? "公開中（非公開にする）" : "非公開（公開する）"}
-                    </button>
-                  </form>
+                  <div className="flex items-center gap-3">
+                    <form action={toggleProductActiveAction}>
+                      <input type="hidden" name="productId" value={product.id} />
+                      <input
+                        type="hidden"
+                        name="active"
+                        value={(!product.active).toString()}
+                      />
+                      <button
+                        type="submit"
+                        className="text-xs font-medium text-zinc-500 hover:text-zinc-800 dark:text-zinc-400 dark:hover:text-zinc-100"
+                      >
+                        {product.active ? "公開中（非公開にする）" : "非公開（公開する）"}
+                      </button>
+                    </form>
+                    {!product.active && (
+                      <DeleteProductButton
+                        productId={product.id}
+                        productName={product.name}
+                        action={deleteProductAction}
+                      />
+                    )}
+                  </div>
                 </div>
 
                 <ul className="mt-3 flex flex-col gap-2">
